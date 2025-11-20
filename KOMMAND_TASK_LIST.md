@@ -5,7 +5,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 
 **Important**: This is for a **standalone repository** called `kommand/`, separate from the Atherio monorepo.
 
-**Overall Progress**: 8/52 tasks completed (15.4%)
+**Overall Progress**: 11/52 tasks completed (21.2%)
 
 **Reference**: All tasks align with `MEDIATOR_ARCHITECTURE_PLAN.md` sections.
 
@@ -469,7 +469,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.9: Implement Mediator Class - Part 1 (Constructor and SendAsync with Response)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create Mediator implementation skeleton and SendAsync method (Architecture Doc Section 8).
 
@@ -563,7 +563,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.10: Implement Mediator Class - Part 2 (SendAsync void and QueryAsync)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Implement remaining dispatch methods for void commands and queries.
 
@@ -618,7 +618,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.11: Implement Mediator Class - Part 3 (PublishAsync)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Implement notification publishing (Architecture Doc Section 7, lines 900-926).
 
