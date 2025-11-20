@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Build configuration -->
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <RootNamespace>Kommand</RootNamespace>
+
+    <!-- Package metadata -->
+    <PackageId>Kommand</PackageId>
+    <Version>0.1.0-alpha</Version>
+    <Authors>Dan Patrascu-Baba</Authors>
+    <Company>Atherio</Company>
+    <Description>A free and open source mediator library for .NET8+ with built-in OpenTelemetry support, interceptors, validation pipeline and zero external dependencies.</Description>
+    <PackageTags>cqrs;mediator;command;query;notification;event;validation;interceptor;opentelemetry;otel;dotnet;dotnet8</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/atherio-org/Kommand</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2025 Atherio</Copyright>
+
+    <!-- Repository (for SourceLink) -->
+    <RepositoryUrl>https://github.com/atherio-org/Kommand</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!-- Symbol packages -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Deterministic builds -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Package validation -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+
+    <!-- Trimming support (not AOT - library uses reflection) -->
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include README in package -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SourceLink for GitHub -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>
