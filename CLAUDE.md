@@ -8,6 +8,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Current Status**: Implementation not started. Architecture complete, ready for Phase 1.
 
+## Git Workflow
+
+**IMPORTANT**: Do NOT create git commits automatically. Only commit when explicitly asked by the user. The user will prompt when it's time to commit changes.
+
 ## Target Framework Strategy
 
 **Single Target: `net8.0`**

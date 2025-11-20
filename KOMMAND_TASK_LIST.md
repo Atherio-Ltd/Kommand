@@ -5,7 +5,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 
 **Important**: This is for a **standalone repository** called `kommand/`, separate from the Atherio monorepo.
 
-**Overall Progress**: 11/52 tasks completed (21.2%)
+**Overall Progress**: 14/52 tasks completed (26.9%)
 
 **Reference**: All tasks align with `MEDIATOR_ARCHITECTURE_PLAN.md` sections.
 
@@ -690,7 +690,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.12: Implement KommandConfiguration Class - Part 1 (Core Structure)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create configuration builder class skeleton (Architecture Doc Section 4, lines 344-351).
 
@@ -754,7 +754,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.13: Implement KommandConfiguration Class - Part 2 (Registration Methods)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Add handler/validator registration methods (Architecture Doc Section 4, lines 354-482).
 
@@ -913,7 +913,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.14: Implement ServiceCollectionExtensions
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create extension method to register Kommand in DI (Architecture Doc Section 4, lines 298-342).
 

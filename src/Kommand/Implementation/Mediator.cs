@@ -58,20 +58,16 @@ internal sealed class Mediator : IMediator
         ICommand<TResponse> command,
         CancellationToken cancellationToken = default)
     {
-        if (command == null) throw new ArgumentNullException(nameof(command));
+        ArgumentNullException.ThrowIfNull(command);
 
         // Build handler type: ICommandHandler<TCommand, TResponse>
         var commandType = command.GetType();
         var handlerType = typeof(ICommandHandler<,>).MakeGenericType(commandType, typeof(TResponse));
 
         // Resolve handler from DI container
-        var handler = _serviceProvider.GetService(handlerType);
-        if (handler == null)
-        {
-            throw new InvalidOperationException(
+        var handler = _serviceProvider.GetService(handlerType) ?? throw new InvalidOperationException(
                 $"No handler registered for command type '{commandType.Name}'. " +
                 $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
-        }
 
         // Invoke HandleAsync using reflection
         var handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand<TResponse>, TResponse>.HandleAsync));
@@ -95,24 +91,20 @@ internal sealed class Mediator : IMediator
         ICommand command,
         CancellationToken cancellationToken = default)
     {
-        if (command == null) throw new ArgumentNullException(nameof(command));
+        ArgumentNullException.ThrowIfNull(command);
 
         // Build handler type: ICommandHandler<TCommand, Unit> (void commands use Unit)
         var commandType = command.GetType();
         var handlerType = typeof(ICommandHandler<,>).MakeGenericType(commandType, typeof(Unit));
 
         // Resolve handler from DI container
-        var handler = _serviceProvider.GetService(handlerType);
-        if (handler == null)
-        {
-            throw new InvalidOperationException(
+        var handler = _serviceProvider.GetService(handlerType) ?? throw new InvalidOperationException(
                 $"No handler registered for command type '{commandType.Name}'. " +
                 $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
-        }
 
         // Invoke HandleAsync using reflection
         var handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand, Unit>.HandleAsync));
-        await (Task<Unit>)handleMethod!.Invoke(handler, new object[] { command, cancellationToken })!;
+        await (Task<Unit>)handleMethod!.Invoke(handler, [command, cancellationToken])!;
     }
 
     /// <summary>
@@ -128,24 +120,20 @@ internal sealed class Mediator : IMediator
         IQuery<TResponse> query,
         CancellationToken cancellationToken = default)
     {
-        if (query == null) throw new ArgumentNullException(nameof(query));
+        ArgumentNullException.ThrowIfNull(query);
 
         // Build handler type: IQueryHandler<TQuery, TResponse>
         var queryType = query.GetType();
         var handlerType = typeof(IQueryHandler<,>).MakeGenericType(queryType, typeof(TResponse));
 
         // Resolve handler from DI container
-        var handler = _serviceProvider.GetService(handlerType);
-        if (handler == null)
-        {
-            throw new InvalidOperationException(
+        var handler = _serviceProvider.GetService(handlerType) ?? throw new InvalidOperationException(
                 $"No handler registered for query type '{queryType.Name}'. " +
                 $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
-        }
 
         // Invoke HandleAsync using reflection
         var handleMethod = handlerType.GetMethod(nameof(IQueryHandler<IQuery<TResponse>, TResponse>.HandleAsync));
-        var task = (Task<TResponse>)handleMethod!.Invoke(handler, new object[] { query, cancellationToken })!;
+        var task = (Task<TResponse>)handleMethod!.Invoke(handler, [query, cancellationToken])!;
         return task;
     }
 
