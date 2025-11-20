@@ -69,12 +69,13 @@ Detailed task lists are in:
 kommand/                              # Root
 ├── src/
 │   └── Kommand/                      # Main library (single package)
-│       ├── Abstractions/             # ICommand, IQuery, IMediator, etc.
-│       ├── Interceptors/             # IInterceptor, ActivityInterceptor, MetricsInterceptor
-│       ├── Validation/               # IValidator, ValidationResult, ValidationInterceptor
-│       ├── Implementation/           # Mediator class (internal)
-│       ├── Registration/             # ServiceCollectionExtensions, KommandConfiguration
-│       └── Exceptions/               # Custom exception types
+│       ├── Unit.cs                   # Core Unit type (Kommand namespace)
+│       ├── Abstractions/             # ICommand, IQuery, IMediator, etc. (Kommand.Abstractions namespace)
+│       ├── Interceptors/             # IInterceptor, ActivityInterceptor, MetricsInterceptor (Kommand.Interceptors namespace)
+│       ├── Validation/               # IValidator, ValidationResult, ValidationInterceptor (Kommand.Validation namespace)
+│       ├── Implementation/           # Mediator class (internal) (Kommand.Implementation namespace)
+│       ├── Registration/             # ServiceCollectionExtensions, KommandConfiguration (Kommand.Registration namespace)
+│       └── Exceptions/               # Custom exception types (Kommand.Exceptions namespace)
 ├── tests/
 │   └── Kommand.Tests/                # Single test project (Unit/ and Integration/ folders)
 ├── samples/
@@ -192,7 +193,8 @@ Notifications use "continue on failure" strategy:
 - ✅ Auto-register OTEL interceptors (unless explicitly disabled)
 - ✅ Follow exact folder structure from MEDIATOR_ARCHITECTURE_PLAN.md
 - ✅ Target net8.0 (forward compatible with .NET 8, 9, 10+)
-- ✅ Keep namespace as `Kommand` (no sub-namespaces for public APIs)
+- ✅ Use namespace structure that matches folder structure (e.g., `Kommand.Abstractions` for files in `Abstractions/` folder)
+- ✅ Core types like `Unit` live in root `Kommand` namespace and folder
 - ✅ Include comprehensive XML documentation for all public APIs
 - ✅ Use contravariant `in` modifier for handler/validator type parameters
 - ✅ Use covariant `out` modifier for response type parameters

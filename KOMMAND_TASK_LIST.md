@@ -5,7 +5,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 
 **Important**: This is for a **standalone repository** called `kommand/`, separate from the Atherio monorepo.
 
-**Overall Progress**: 0/52 tasks completed (0%)
+**Overall Progress**: 8/52 tasks completed (15.4%)
 
 **Reference**: All tasks align with `MEDIATOR_ARCHITECTURE_PLAN.md` sections.
 
@@ -14,7 +14,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ## Phase 1: Core Foundation (15 tasks)
 
 ### Task 1.1: Create Repository and Project Structure
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Set up a new Git repository with the .NET 9 class library project structure (Architecture Doc Section 5).
 
@@ -71,7 +71,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.2: Create Folder Structure Inside Kommand Project
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create the internal folder structure for organizing code (Architecture Doc Section 5).
 
@@ -100,14 +100,16 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.3: Implement Core Request Abstractions
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create the foundational marker interfaces for requests (Architecture Doc Section 2, lines 75-86).
 
 **Instructions**:
 1. In `src/Kommand/Abstractions/`, create `IRequest.cs`:
    ```csharp
-   namespace Kommand;
+   namespace Kommand.Abstractions;
+
+   using Kommand;
 
    /// <summary>
    /// Marker interface for all requests with a response type.
@@ -120,7 +122,7 @@ This document contains a granular task breakdown for implementing the Kommand li
    /// </summary>
    public interface IRequest : IRequest<Unit> { }
    ```
-2. Create `Unit.cs` in same directory:
+2. In `src/Kommand/` (root folder), create `Unit.cs`:
    ```csharp
    namespace Kommand;
 
@@ -151,21 +153,25 @@ This document contains a granular task breakdown for implementing the Kommand li
 - [ ] `IRequest<TResponse>` with covariant `out` modifier
 - [ ] `IRequest` inherits from `IRequest<Unit>`
 - [ ] `Unit` struct with static `Value` field
-- [ ] All types in `Kommand` namespace
+- [ ] IRequest types in `Kommand.Abstractions` namespace (matching folder structure)
+- [ ] Unit type in root `Kommand` namespace (root folder)
+- [ ] IRequest.cs includes `using Kommand;` to reference Unit
 - [ ] Comprehensive XML documentation
 - [ ] Project builds with zero warnings
 
 ---
 
 ### Task 1.4: Implement Command and Query Abstractions
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create CQRS-specific interfaces for commands and queries (Architecture Doc Section 2, lines 83-86).
 
 **Instructions**:
 1. In `src/Kommand/Abstractions/`, create `ICommand.cs`:
    ```csharp
-   namespace Kommand;
+   namespace Kommand.Abstractions;
+
+   using Kommand;
 
    /// <summary>
    /// Marker interface for commands (write operations that change state).
@@ -180,7 +186,7 @@ This document contains a granular task breakdown for implementing the Kommand li
    ```
 2. Create `IQuery.cs` in same directory:
    ```csharp
-   namespace Kommand;
+   namespace Kommand.Abstractions;
 
    /// <summary>
    /// Marker interface for queries (read-only operations that don't change state).
@@ -215,7 +221,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.5: Implement Handler Abstractions
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create handler interfaces for processing commands and queries (Architecture Doc Section 2, lines 89-99).
 
@@ -290,7 +296,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.6: Implement Notification Abstractions
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create pub/sub interfaces for domain events (Architecture Doc Section 2, lines 101-108).
 
@@ -352,7 +358,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.7: Implement IMediator Interface
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create the main mediator interface that users will inject (Architecture Doc Section 8, lines 954-978).
 
@@ -428,7 +434,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.8: Add NuGet Dependencies
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Add required NuGet packages (Architecture Doc Section 5, lines 643-649).
 
@@ -1687,7 +1693,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 
 **Total Tasks**: 52 tasks
 **Estimated Total Time**: ~52 hours (1 hour per task average)
-**Completion Rate**: 0% (0/52 complete)
+**Completion Rate**: 15.4% (8/52 complete)
 
 ### Phase Breakdown
 - **Phase 1: Core Foundation** - 15 tasks (~15 hours)
