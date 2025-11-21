@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Kommand;
 using Kommand.Abstractions;
 using Kommand.Implementation;
+using Kommand.Interceptors;
 using Kommand.Registration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -40,7 +41,8 @@ public static class ServiceCollectionExtensions
     /// <item><description>Query handlers - <see cref="IQueryHandler{TQuery, TResponse}"/></description></item>
     /// <item><description>Notification handlers - <see cref="INotificationHandler{TNotification}"/></description></item>
     /// <item><description>Validators - IValidator&lt;T&gt; (when implemented in Phase 4)</description></item>
-    /// <item><description>Interceptors - Custom cross-cutting concern implementations</description></item>
+    /// <item><description>Built-in OpenTelemetry interceptors - <see cref="ActivityInterceptor{TRequest,TResponse}"/> and <see cref="MetricsInterceptor{TRequest,TResponse}"/> (automatically registered as Singleton)</description></item>
+    /// <item><description>Custom interceptors - User-defined cross-cutting concern implementations</description></item>
     /// </list>
     /// </para>
     /// <para>
@@ -48,7 +50,8 @@ public static class ServiceCollectionExtensions
     /// - Mediator: <strong>Scoped</strong> (allows participation in request scope)<br/>
     /// - Handlers: <strong>Scoped</strong> (can inject DbContext, participate in transactions)<br/>
     /// - Validators: <strong>Scoped</strong> (can inject repositories for async validation)<br/>
-    /// - Interceptors: <strong>Scoped</strong> (can maintain state within a request)
+    /// - Built-in OTEL Interceptors: <strong>Singleton</strong> (stateless, lightweight, zero overhead when OTEL not configured)<br/>
+    /// - Custom Interceptors: <strong>Scoped</strong> (can maintain state within a request)
     /// </para>
     /// <para>
     /// <strong>Why Scoped?</strong><br/>
@@ -162,10 +165,16 @@ public static class ServiceCollectionExtensions
             services.Add(descriptor);
         }
 
-        // TODO: Phase 3 - Register OpenTelemetry interceptors automatically
-        // These will be added when OTEL integration is implemented:
-        // services.TryAddSingleton<ActivityInterceptor>();
-        // services.TryAddSingleton<MetricsInterceptor>();
+        // Register built-in OpenTelemetry interceptors (always enabled, zero-config)
+        // These interceptors are registered as Singleton because they are stateless and lightweight
+        // They create Activities and Metrics with ~10-50ns overhead when OTEL is not configured
+        // IMPORTANT: These must be registered BEFORE user-defined interceptors to be outermost
+        services.TryAddEnumerable(ServiceDescriptor.Singleton(
+            typeof(IInterceptor<,>),
+            typeof(ActivityInterceptor<,>)));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton(
+            typeof(IInterceptor<,>),
+            typeof(MetricsInterceptor<,>)));
 
         // Register user-defined interceptors
         // Interceptors are registered as Scoped to allow state management within a request
