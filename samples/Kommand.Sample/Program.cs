@@ -1,180 +1,252 @@
 using Kommand;
 using Kommand.Abstractions;
+using Kommand.Sample.Commands;
+using Kommand.Sample.Infrastructure;
+using Kommand.Sample.Interceptors;
+using Kommand.Sample.Queries;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-Console.WriteLine("=== Kommand OpenTelemetry Integration Sample ===\n");
+Console.WriteLine("╔═══════════════════════════════════════════════════════════╗");
+Console.WriteLine("║   Kommand Comprehensive Sample                            ║");
+Console.WriteLine("║   Demonstrating all features of Kommand library          ║");
+Console.WriteLine("╚═══════════════════════════════════════════════════════════╝");
+Console.WriteLine();
 
-// Create host builder with dependency injection
+// ============================================================================
+// STEP 1: Setup Dependency Injection with Kommand
+// ============================================================================
+Console.WriteLine("Setting up Kommand with all features...\n");
+
 var builder = Host.CreateApplicationBuilder(args);
 
-// STEP 1: Register Kommand (no OTEL-specific configuration needed!)
+// Register application services (repository)
+builder.Services.AddScoped<IUserRepository, InMemoryUserRepository>();
+
+// Configure Kommand with all features
 builder.Services.AddKommand(config =>
 {
+    // Auto-discover handlers and validators from assembly
     config.RegisterHandlersFromAssembly(typeof(Program).Assembly);
+
+    // Add custom interceptor (logged execution)
+    config.AddInterceptor(typeof(LoggingInterceptor<,>));
+
+    // Enable validation - validators will be executed automatically
+    config.WithValidation();
 });
 
-// STEP 2: Add OpenTelemetry - automatically discovers Kommand's ActivitySource and Meter
-// This is the ONLY configuration needed to enable distributed tracing and metrics!
+// Optional: Add OpenTelemetry for distributed tracing and metrics
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(
         serviceName: "Kommand.Sample",
         serviceVersion: "1.0.0"))
     .WithTracing(tracing => tracing
-        .AddSource("Kommand") // Subscribe to Kommand's distributed traces
-        .AddConsoleExporter() // Export traces to console (in production, use Jaeger, Zipkin, etc.)
-    )
+        .AddSource("Kommand")
+        .AddConsoleExporter())
     .WithMetrics(metrics => metrics
-        .AddMeter("Kommand") // Subscribe to Kommand's metrics
-        .AddConsoleExporter() // Export metrics to console (in production, use Prometheus, OTLP, etc.)
-    );
+        .AddMeter("Kommand")
+        .AddConsoleExporter());
 
 // Build the host
 var host = builder.Build();
-
-// Get the mediator from DI
 var mediator = host.Services.GetRequiredService<IMediator>();
 
-Console.WriteLine("Executing commands with OpenTelemetry enabled...\n");
+Console.WriteLine("✓ Kommand configured with:");
+Console.WriteLine("  • Command/Query handlers (auto-discovered)");
+Console.WriteLine("  • Validators (auto-discovered)");
+Console.WriteLine("  • Notification handlers (auto-discovered)");
+Console.WriteLine("  • Custom logging interceptor");
+Console.WriteLine("  • Built-in OpenTelemetry interceptors");
+Console.WriteLine("  • Validation interceptor");
+Console.WriteLine();
 
-// STEP 3: Execute various commands - traces and metrics will be automatically created!
+// ============================================================================
+// STEP 2: Demonstrate Command with Result (CreateUserCommand)
+// ============================================================================
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("FEATURE 1: Command with Result");
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("Creating a new user...");
 
-// Example 1: Simple command
-Console.WriteLine("1. Executing CreateUser command...");
-var user = await mediator.SendAsync(
-    new CreateUserCommand("alice@example.com", "Alice Johnson"),
-    CancellationToken.None);
-Console.WriteLine($"   Result: User created with ID {user.Id}\n");
-
-// Example 2: Query
-Console.WriteLine("2. Executing GetUser query...");
-var queriedUser = await mediator.QueryAsync(
-    new GetUserQuery(user.Id),
-    CancellationToken.None);
-Console.WriteLine($"   Result: Found user {queriedUser?.Name}\n");
-
-// Example 3: Command that will fail (to show error tracing)
-Console.WriteLine("3. Executing FailingCommand (will demonstrate error tracing)...");
 try
 {
-    await mediator.SendAsync(new FailingTestCommand(), CancellationToken.None);
+    var user = await mediator.SendAsync(
+        new CreateUserCommand("alice@example.com", "Alice Johnson"),
+        CancellationToken.None);
+
+    Console.WriteLine($"✓ User created successfully:");
+    Console.WriteLine($"  • ID: {user.Id}");
+    Console.WriteLine($"  • Email: {user.Email}");
+    Console.WriteLine($"  • Name: {user.Name}");
+    Console.WriteLine($"  • CreatedAt: {user.CreatedAt:O}");
+    Console.WriteLine();
+    Console.WriteLine("Notice: Two notification handlers executed (email + audit)");
 }
-catch (InvalidOperationException ex)
+catch (ValidationException ex)
 {
-    Console.WriteLine($"   Expected error: {ex.Message}\n");
+    Console.WriteLine($"✗ Validation failed: {ex.Message}");
+    foreach (var error in ex.Errors)
+    {
+        Console.WriteLine($"  • {error.PropertyName}: {error.ErrorMessage}");
+    }
 }
-
-// Example 4: Slow command (to show duration tracking)
-Console.WriteLine("4. Executing SlowCommand (will take ~100ms)...");
-await mediator.SendAsync(new SlowCommand(), CancellationToken.None);
-Console.WriteLine("   Completed!\n");
-
-Console.WriteLine("\n=== Execution Complete ===");
-Console.WriteLine("\nNOTE: In the console output above, you should see:");
-Console.WriteLine("  - Activity traces showing command execution with timings");
-Console.WriteLine("  - Metrics showing request counts and durations");
-Console.WriteLine("  - Error status for the FailingCommand");
-Console.WriteLine("\nIn production, configure OpenTelemetry exporters for:");
-Console.WriteLine("  - Jaeger or Zipkin for distributed tracing");
-Console.WriteLine("  - Prometheus or Application Insights for metrics");
+Console.WriteLine();
 
 // ============================================================================
-// Sample Commands, Queries, and Handlers
+// STEP 3: Demonstrate Validation with Async DB Check
 // ============================================================================
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("FEATURE 2: Validation with Async Database Check");
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("Attempting to create user with duplicate email...");
 
-/// <summary>
-/// Sample command to create a user.
-/// </summary>
-public record CreateUserCommand(string Email, string Name) : ICommand<User>;
-
-/// <summary>
-/// Handler for CreateUserCommand.
-/// </summary>
-public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, User>
+try
 {
-    public Task<User> HandleAsync(CreateUserCommand command, CancellationToken cancellationToken)
-    {
-        // Simulate user creation
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = command.Email,
-            Name = command.Name,
-            CreatedAt = DateTime.UtcNow
-        };
+    await mediator.SendAsync(
+        new CreateUserCommand("alice@example.com", "Alice Smith"),
+        CancellationToken.None);
 
-        return Task.FromResult(user);
+    Console.WriteLine("✗ Should have thrown validation exception!");
+}
+catch (ValidationException ex)
+{
+    Console.WriteLine($"✓ Validation correctly prevented duplicate email:");
+    foreach (var error in ex.Errors)
+    {
+        Console.WriteLine($"  • {error.PropertyName}: {error.ErrorMessage}");
     }
 }
+Console.WriteLine();
 
-/// <summary>
-/// Sample query to get a user by ID.
-/// </summary>
-public record GetUserQuery(Guid Id) : IQuery<User?>;
+// ============================================================================
+// STEP 4: Demonstrate Validation Error Collection (Not Fail-Fast)
+// ============================================================================
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("FEATURE 3: Validation Error Collection");
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("Creating user with multiple validation errors...");
 
-/// <summary>
-/// Handler for GetUserQuery.
-/// </summary>
-public class GetUserQueryHandler : IQueryHandler<GetUserQuery, User?>
+try
 {
-    public Task<User?> HandleAsync(GetUserQuery query, CancellationToken cancellationToken)
+    await mediator.SendAsync(
+        new CreateUserCommand("", "A"), // Empty email + too short name
+        CancellationToken.None);
+
+    Console.WriteLine("✗ Should have thrown validation exception!");
+}
+catch (ValidationException ex)
+{
+    Console.WriteLine($"✓ Collected ALL validation errors (not fail-fast):");
+    Console.WriteLine($"  Total errors: {ex.Errors.Count}");
+    foreach (var error in ex.Errors)
     {
-        // Simulate user retrieval
-        // In a real app, this would query a database
-        return Task.FromResult<User?>(new User
-        {
-            Id = query.Id,
-            Email = "alice@example.com",
-            Name = "Alice Johnson",
-            CreatedAt = DateTime.UtcNow
-        });
+        Console.WriteLine($"  • {error.PropertyName}: {error.ErrorMessage}");
     }
 }
+Console.WriteLine();
 
-/// <summary>
-/// Sample command that fails (to demonstrate error tracing).
-/// </summary>
-public record FailingTestCommand : ICommand<Unit>;
+// ============================================================================
+// STEP 5: Demonstrate Query Returning Single Object
+// ============================================================================
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("FEATURE 4: Query Returning Single Object");
+Console.WriteLine("─────────────────────────────────────────────────────");
 
-/// <summary>
-/// Handler that always fails (to demonstrate error tracing).
-/// </summary>
-public class FailingTestCommandHandler : ICommandHandler<FailingTestCommand, Unit>
+// First create a user to query
+var createdUser = await mediator.SendAsync(
+    new CreateUserCommand("bob@example.com", "Bob Smith"),
+    CancellationToken.None);
+
+Console.WriteLine($"Querying user by ID: {createdUser.Id}...");
+
+var queriedUser = await mediator.QueryAsync(
+    new GetUserQuery(createdUser.Id),
+    CancellationToken.None);
+
+if (queriedUser != null)
 {
-    public Task<Unit> HandleAsync(FailingTestCommand command, CancellationToken cancellationToken)
-    {
-        throw new InvalidOperationException("This command is designed to fail to demonstrate error tracing!");
-    }
+    Console.WriteLine($"✓ Found user: {queriedUser.Name} ({queriedUser.Email})");
 }
-
-/// <summary>
-/// Sample command that takes time to execute (to demonstrate duration tracking).
-/// </summary>
-public record SlowCommand : ICommand<Unit>;
-
-/// <summary>
-/// Handler with artificial delay (to demonstrate duration tracking).
-/// </summary>
-public class SlowCommandHandler : ICommandHandler<SlowCommand, Unit>
+else
 {
-    public async Task<Unit> HandleAsync(SlowCommand command, CancellationToken cancellationToken)
-    {
-        // Simulate slow operation
-        await Task.Delay(100, cancellationToken);
-        return Unit.Value;
-    }
+    Console.WriteLine("✗ User not found");
 }
+Console.WriteLine();
 
-/// <summary>
-/// Sample user entity.
-/// </summary>
-public class User
+// ============================================================================
+// STEP 6: Demonstrate Query Returning Collection
+// ============================================================================
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("FEATURE 5: Query Returning Collection");
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("Querying all users...");
+
+var users = await mediator.QueryAsync(
+    new ListUsersQuery(),
+    CancellationToken.None);
+
+Console.WriteLine($"✓ Found {users.Count} users:");
+foreach (var u in users)
 {
-    public Guid Id { get; set; }
-    public required string Email { get; set; }
-    public required string Name { get; set; }
-    public DateTime CreatedAt { get; set; }
+    Console.WriteLine($"  • {u.Name} ({u.Email})");
 }
+Console.WriteLine();
+
+// ============================================================================
+// STEP 7: Demonstrate Void Command (Unit)
+// ============================================================================
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine("FEATURE 6: Void Command (Unit Result)");
+Console.WriteLine("─────────────────────────────────────────────────────");
+Console.WriteLine($"Updating user {createdUser.Id} name...");
+
+await mediator.SendAsync(
+    new UpdateUserCommand(createdUser.Id, "Bob Johnson Jr."),
+    CancellationToken.None);
+
+Console.WriteLine("✓ User updated successfully");
+
+// Verify update
+var updatedUser = await mediator.QueryAsync(
+    new GetUserQuery(createdUser.Id),
+    CancellationToken.None);
+
+Console.WriteLine($"  New name: {updatedUser?.Name}");
+Console.WriteLine($"  UpdatedAt: {updatedUser?.UpdatedAt:O}");
+Console.WriteLine();
+
+// ============================================================================
+// STEP 8: Summary
+// ============================================================================
+Console.WriteLine("═════════════════════════════════════════════════════");
+Console.WriteLine("SUMMARY: All Kommand Features Demonstrated");
+Console.WriteLine("═════════════════════════════════════════════════════");
+Console.WriteLine("✓ Commands with results (CreateUserCommand)");
+Console.WriteLine("✓ Void commands with Unit (UpdateUserCommand)");
+Console.WriteLine("✓ Queries returning single objects (GetUserQuery)");
+Console.WriteLine("✓ Queries returning collections (ListUsersQuery)");
+Console.WriteLine("✓ Async validation with database checks");
+Console.WriteLine("✓ Validation error collection (not fail-fast)");
+Console.WriteLine("✓ Notifications with multiple handlers (pub/sub)");
+Console.WriteLine("✓ Custom interceptors (LoggingInterceptor)");
+Console.WriteLine("✓ OpenTelemetry integration (traces + metrics)");
+Console.WriteLine("✓ Auto-discovery of handlers and validators");
+Console.WriteLine("✓ Scoped lifetime (supports DbContext injection)");
+Console.WriteLine();
+
+Console.WriteLine("═════════════════════════════════════════════════════");
+Console.WriteLine("TIP: Review the console output above to see:");
+Console.WriteLine("  • Validation errors with property names");
+Console.WriteLine("  • Notification handlers executing (email + audit)");
+Console.WriteLine("  • OpenTelemetry traces and metrics");
+Console.WriteLine("  • Custom interceptor logs");
+Console.WriteLine("═════════════════════════════════════════════════════");
+Console.WriteLine();
+
+Console.WriteLine("Press any key to exit...");
+Console.ReadKey();

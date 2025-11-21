@@ -161,10 +161,14 @@ _TeamCity*
 coverage*.json
 coverage*.xml
 coverage*.info
+coverage-report/
 
 # Visual Studio code coverage results
 *.coverage
 *.coveragexml
+
+# Test Results
+TestResults/
 
 # NCrunch
 _NCrunch_*

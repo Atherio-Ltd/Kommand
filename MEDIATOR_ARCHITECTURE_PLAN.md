@@ -1166,11 +1166,23 @@ services.AddKommand(config =>
 
 ### Performance Targets
 
+#### Absolute Overhead (Microbenchmarks)
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| Mediator dispatch overhead | <2 μs | DI resolution + reflection |
+| Per-interceptor cost | <100 ns | Pipeline delegate invocation |
+| Total (3 interceptors) | <3 μs | End-to-end overhead |
+
+**Note:** Ratio-based targets (e.g., "<1.5x baseline") are not meaningful when the baseline handler is trivial. Absolute overhead targets better reflect production impact.
+
+#### Realistic Workload Overhead
+
 | Scenario | Target Overhead | Notes |
 |----------|----------------|-------|
-| Direct method call | 1.0x (baseline) | Reference |
-| Kommand without interceptors | <1.5x | DI resolution + dispatch |
-| Kommand with 3 interceptors | <2.0x | Acceptable for production |
+| 1ms database operation | <0.1% | Typical lightweight query |
+| 10ms external API call | <0.01% | Typical HTTP request |
+| 100ms+ long-running operation | <0.001% | Completely negligible |
 | vs MediatR | Similar or better | Competitive |
 
 ### Benchmarks

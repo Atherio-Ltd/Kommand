@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Kommand.Abstractions;
@@ -16,6 +17,11 @@ namespace Kommand.Registration;
 /// then applies them to the <see cref="IServiceCollection"/> when <c>AddKommand()</c> is called.
 /// </para>
 /// <para>
+/// <strong>Assembly Scanning Cache:</strong><br/>
+/// Assembly scanning results are cached per assembly to improve performance when the same assembly
+/// is scanned multiple times. The cache is thread-safe and shared across all configuration instances.
+/// </para>
+/// <para>
 /// <strong>Typical usage:</strong>
 /// <code>
 /// services.AddKommand(config =>
@@ -29,6 +35,11 @@ namespace Kommand.Registration;
 /// </remarks>
 public class KommandConfiguration
 {
+    /// <summary>
+    /// Thread-safe cache of assembly scanning results to avoid redundant reflection operations.
+    /// </summary>
+    private static readonly ConcurrentDictionary<Assembly, CachedAssemblyRegistrations> AssemblyCache = new();
+
     private readonly List<ServiceDescriptor> _handlerDescriptors = new();
     private readonly List<ServiceDescriptor> _validatorDescriptors = new();
     private readonly List<Type> _interceptorTypes = new();
@@ -158,20 +169,46 @@ public class KommandConfiguration
                 assembly.GetName().Name);
         }
 
-        // Orchestrate registration of all handler types
-        RegisterCommandHandlers(assembly, handlerLifetime);
-        RegisterQueryHandlers(assembly, handlerLifetime);
-        RegisterNotificationHandlers(assembly, handlerLifetime);
-        RegisterValidators(assembly);
+        // Try to get cached registrations for this assembly
+        var cachedRegistrations = AssemblyCache.GetOrAdd(assembly, asm =>
+        {
+            // Cache miss - perform reflection and cache results
+            var handlers = new List<(Type InterfaceType, Type ImplementationType)>();
+            var validators = new List<(Type InterfaceType, Type ImplementationType)>();
+
+            // Scan for all handler types
+            ScanCommandHandlers(asm, handlers);
+            ScanQueryHandlers(asm, handlers);
+            ScanNotificationHandlers(asm, handlers);
+            ScanValidators(asm, validators);
+
+            return new CachedAssemblyRegistrations
+            {
+                Handlers = handlers,
+                Validators = validators
+            };
+        });
+
+        // Apply cached registrations with the specified lifetime
+        foreach (var (interfaceType, implementationType) in cachedRegistrations.Handlers)
+        {
+            _handlerDescriptors.Add(new ServiceDescriptor(interfaceType, implementationType, handlerLifetime));
+        }
+
+        foreach (var (interfaceType, implementationType) in cachedRegistrations.Validators)
+        {
+            // Validators are always Scoped
+            _validatorDescriptors.Add(new ServiceDescriptor(interfaceType, implementationType, ServiceLifetime.Scoped));
+        }
 
         return this;
     }
 
     /// <summary>
-    /// Scans the assembly for ICommandHandler implementations and registers them.
+    /// Scans the assembly for ICommandHandler implementations and adds them to the list.
     /// </summary>
     [RequiresUnreferencedCode("Uses reflection for type discovery")]
-    private void RegisterCommandHandlers(Assembly assembly, ServiceLifetime lifetime)
+    private static void ScanCommandHandlers(Assembly assembly, List<(Type InterfaceType, Type ImplementationType)> handlers)
     {
         var commandHandlers = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
@@ -187,16 +224,16 @@ public class KommandConfiguration
 
             foreach (var @interface in interfaces)
             {
-                _handlerDescriptors.Add(new ServiceDescriptor(@interface, handlerType, lifetime));
+                handlers.Add((@interface, handlerType));
             }
         }
     }
 
     /// <summary>
-    /// Scans the assembly for IQueryHandler implementations and registers them.
+    /// Scans the assembly for IQueryHandler implementations and adds them to the list.
     /// </summary>
     [RequiresUnreferencedCode("Uses reflection for type discovery")]
-    private void RegisterQueryHandlers(Assembly assembly, ServiceLifetime lifetime)
+    private static void ScanQueryHandlers(Assembly assembly, List<(Type InterfaceType, Type ImplementationType)> handlers)
     {
         var queryHandlers = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
@@ -212,16 +249,16 @@ public class KommandConfiguration
 
             foreach (var @interface in interfaces)
             {
-                _handlerDescriptors.Add(new ServiceDescriptor(@interface, handlerType, lifetime));
+                handlers.Add((@interface, handlerType));
             }
         }
     }
 
     /// <summary>
-    /// Scans the assembly for INotificationHandler implementations and registers them.
+    /// Scans the assembly for INotificationHandler implementations and adds them to the list.
     /// </summary>
     [RequiresUnreferencedCode("Uses reflection for type discovery")]
-    private void RegisterNotificationHandlers(Assembly assembly, ServiceLifetime lifetime)
+    private static void ScanNotificationHandlers(Assembly assembly, List<(Type InterfaceType, Type ImplementationType)> handlers)
     {
         var notificationHandlers = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
@@ -237,19 +274,19 @@ public class KommandConfiguration
 
             foreach (var @interface in interfaces)
             {
-                _handlerDescriptors.Add(new ServiceDescriptor(@interface, handlerType, lifetime));
+                handlers.Add((@interface, handlerType));
             }
         }
     }
 
     /// <summary>
-    /// Scans the assembly for IValidator implementations and registers them.
+    /// Scans the assembly for IValidator implementations and adds them to the list.
     /// Validators are always registered as Scoped to support async validation with repositories.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This method discovers all classes that implement <c>IValidator&lt;T&gt;</c> and registers
-    /// them in the DI container. Multiple validators can be registered for the same request type,
+    /// This method discovers all classes that implement <c>IValidator&lt;T&gt;</c> and adds them
+    /// to the validators list. Multiple validators can be registered for the same request type,
     /// and they will all execute when validation is enabled.
     /// </para>
     /// <para>
@@ -266,24 +303,23 @@ public class KommandConfiguration
     /// </para>
     /// </remarks>
     [RequiresUnreferencedCode("Uses reflection for type discovery")]
-    private void RegisterValidators(Assembly assembly)
+    private static void ScanValidators(Assembly assembly, List<(Type InterfaceType, Type ImplementationType)> validators)
     {
-        var validators = assembly.GetTypes()
+        var validatorTypes = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
             .Where(t => t.GetInterfaces().Any(i =>
                 i.IsGenericType &&
                 i.GetGenericTypeDefinition() == typeof(IValidator<>)))
             .ToList();
 
-        foreach (var validatorType in validators)
+        foreach (var validatorType in validatorTypes)
         {
             var interfaces = validatorType.GetInterfaces()
                 .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>));
 
             foreach (var @interface in interfaces)
             {
-                // Validators are always Scoped (need to inject repositories for async validation)
-                _validatorDescriptors.Add(new ServiceDescriptor(@interface, validatorType, ServiceLifetime.Scoped));
+                validators.Add((@interface, validatorType));
             }
         }
     }
@@ -448,5 +484,14 @@ public class KommandConfiguration
         // The DI container will create closed generic instances for each request type
         AddInterceptor(typeof(ValidationInterceptor<,>));
         return this;
+    }
+
+    /// <summary>
+    /// Cached registration information for an assembly.
+    /// </summary>
+    private record CachedAssemblyRegistrations
+    {
+        public required List<(Type InterfaceType, Type ImplementationType)> Handlers { get; init; }
+        public required List<(Type InterfaceType, Type ImplementationType)> Validators { get; init; }
     }
 }

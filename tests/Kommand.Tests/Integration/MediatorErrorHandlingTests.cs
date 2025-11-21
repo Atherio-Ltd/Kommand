@@ -44,10 +44,10 @@ public class MediatorErrorHandlingTests
     }
 
     /// <summary>
-    /// Verifies that SendAsync throws InvalidOperationException when no handler is registered.
+    /// Verifies that SendAsync throws HandlerNotFoundException when no handler is registered.
     /// </summary>
     [Fact]
-    public async Task SendAsync_WithNoHandlerRegistered_ShouldThrowInvalidOperationException()
+    public async Task SendAsync_WithNoHandlerRegistered_ShouldThrowHandlerNotFoundException()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -56,11 +56,12 @@ public class MediatorErrorHandlingTests
         var mediator = provider.GetRequiredService<IMediator>();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<HandlerNotFoundException>(
             () => mediator.SendAsync(new UnregisteredCommand("test"), CancellationToken.None));
 
-        Assert.Contains("No handler registered for command type", exception.Message);
+        Assert.Contains("No handler registered for request type", exception.Message);
         Assert.Contains("UnregisteredCommand", exception.Message);
+        Assert.Equal(typeof(UnregisteredCommand), exception.RequestType);
     }
 
     /// <summary>
@@ -81,10 +82,10 @@ public class MediatorErrorHandlingTests
     }
 
     /// <summary>
-    /// Verifies that QueryAsync throws InvalidOperationException when no handler is registered.
+    /// Verifies that QueryAsync throws HandlerNotFoundException when no handler is registered.
     /// </summary>
     [Fact]
-    public async Task QueryAsync_WithNoHandlerRegistered_ShouldThrowInvalidOperationException()
+    public async Task QueryAsync_WithNoHandlerRegistered_ShouldThrowHandlerNotFoundException()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -93,11 +94,12 @@ public class MediatorErrorHandlingTests
         var mediator = provider.GetRequiredService<IMediator>();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<HandlerNotFoundException>(
             () => mediator.QueryAsync(new UnregisteredQuery(), CancellationToken.None));
 
-        Assert.Contains("No handler registered for query type", exception.Message);
+        Assert.Contains("No handler registered for request type", exception.Message);
         Assert.Contains("UnregisteredQuery", exception.Message);
+        Assert.Equal(typeof(UnregisteredQuery), exception.RequestType);
     }
 
     /// <summary>

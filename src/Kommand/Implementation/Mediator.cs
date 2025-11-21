@@ -54,7 +54,7 @@ internal sealed class Mediator : IMediator
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The result from the command handler</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is null</exception>
-    /// <exception cref="InvalidOperationException">Thrown when no handler is registered for the command type</exception>
+    /// <exception cref="HandlerNotFoundException">Thrown when no handler is registered for the command type</exception>
     public async Task<TResponse> SendAsync<TResponse>(
         ICommand<TResponse> command,
         CancellationToken cancellationToken = default)
@@ -66,9 +66,7 @@ internal sealed class Mediator : IMediator
         var handlerType = typeof(ICommandHandler<,>).MakeGenericType(commandType, typeof(TResponse));
 
         // Resolve handler from DI container
-        var handler = _serviceProvider.GetService(handlerType) ?? throw new InvalidOperationException(
-                $"No handler registered for command type '{commandType.Name}'. " +
-                $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
+        var handler = _serviceProvider.GetService(handlerType) ?? throw new HandlerNotFoundException(commandType);
 
         // Get handler method for invocation
         var handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand<TResponse>, TResponse>.HandleAsync));
@@ -101,7 +99,7 @@ internal sealed class Mediator : IMediator
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>A task representing the asynchronous operation</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is null</exception>
-    /// <exception cref="InvalidOperationException">Thrown when no handler is registered for the command type</exception>
+    /// <exception cref="HandlerNotFoundException">Thrown when no handler is registered for the command type</exception>
     /// <remarks>
     /// Void commands internally use <see cref="Unit"/> as the response type to maintain
     /// uniformity in the mediator pipeline. The Unit value is discarded after handler execution.
@@ -117,9 +115,7 @@ internal sealed class Mediator : IMediator
         var handlerType = typeof(ICommandHandler<,>).MakeGenericType(commandType, typeof(Unit));
 
         // Resolve handler from DI container
-        var handler = _serviceProvider.GetService(handlerType) ?? throw new InvalidOperationException(
-                $"No handler registered for command type '{commandType.Name}'. " +
-                $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
+        var handler = _serviceProvider.GetService(handlerType) ?? throw new HandlerNotFoundException(commandType);
 
         // Get handler method for invocation
         var handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand, Unit>.HandleAsync));
@@ -153,7 +149,7 @@ internal sealed class Mediator : IMediator
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The data from the query handler</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> is null</exception>
-    /// <exception cref="InvalidOperationException">Thrown when no handler is registered for the query type</exception>
+    /// <exception cref="HandlerNotFoundException">Thrown when no handler is registered for the query type</exception>
     public async Task<TResponse> QueryAsync<TResponse>(
         IQuery<TResponse> query,
         CancellationToken cancellationToken = default)
@@ -165,9 +161,7 @@ internal sealed class Mediator : IMediator
         var handlerType = typeof(IQueryHandler<,>).MakeGenericType(queryType, typeof(TResponse));
 
         // Resolve handler from DI container
-        var handler = _serviceProvider.GetService(handlerType) ?? throw new InvalidOperationException(
-                $"No handler registered for query type '{queryType.Name}'. " +
-                $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
+        var handler = _serviceProvider.GetService(handlerType) ?? throw new HandlerNotFoundException(queryType);
 
         // Get handler method for invocation
         var handleMethod = handlerType.GetMethod(nameof(IQueryHandler<IQuery<TResponse>, TResponse>.HandleAsync));
