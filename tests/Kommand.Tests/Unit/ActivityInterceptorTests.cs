@@ -73,12 +73,16 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
+        // Clear any activities captured during setup (from parallel tests)
+        activities.Clear();
+
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert
-        Assert.Single(activities);
-        Assert.NotNull(activities[0]);
+        // Assert - Filter to only TestCommand activities
+        var testActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
+        Assert.Single(testActivities);
+        Assert.NotNull(testActivities[0]);
     }
 
     /// <summary>
@@ -106,12 +110,16 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
+        // Clear any activities captured during setup (from parallel tests)
+        activities.Clear();
+
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert
-        Assert.Single(activities);
-        Assert.Equal("Command.TestCommand", activities[0].DisplayName);
+        // Assert - Filter to only TestCommand activities
+        var testActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
+        Assert.Single(testActivities);
+        Assert.Equal("Command.TestCommand", testActivities[0].DisplayName);
     }
 
     /// <summary>
@@ -179,9 +187,10 @@ public class ActivityInterceptorTests
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert
-        Assert.Single(activities);
-        var activity = activities[0];
+        // Assert - Filter to only TestCommand activities (other parallel tests may add activities)
+        var testActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
+        Assert.Single(testActivities);
+        var activity = testActivities[0];
 
         // Verify required tags
         Assert.Equal("Command", activity.GetTagItem("kommand.request.type"));
