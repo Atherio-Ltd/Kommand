@@ -181,18 +181,28 @@ public static class ServiceCollectionExtensions
         // We register both the concrete type AND all IInterceptor<,> interfaces it implements
         foreach (var interceptorType in config.InterceptorTypes)
         {
-            // Find all IInterceptor<,> interfaces this type implements
-            var interceptorInterfaces = interceptorType.GetInterfaces()
-                .Where(i => i.IsGenericType &&
-                           (i.GetGenericTypeDefinition() == typeof(IInterceptor<,>) ||
-                            i.GetGenericTypeDefinition() == typeof(ICommandInterceptor<,>) ||
-                            i.GetGenericTypeDefinition() == typeof(IQueryInterceptor<,>)));
-
-            foreach (var @interface in interceptorInterfaces)
+            // Check if this is an open generic type (e.g., ValidationInterceptor<,>)
+            if (interceptorType.IsGenericTypeDefinition)
             {
-                // Register each interceptor interface implementation
-                // Multiple registrations of the same interface are collected via IEnumerable<> resolution
-                services.AddScoped(@interface, interceptorType);
+                // For open generic types, register directly against IInterceptor<,>
+                // The DI container will create closed generic instances as needed
+                services.AddScoped(typeof(IInterceptor<,>), interceptorType);
+            }
+            else
+            {
+                // For closed types, find all IInterceptor<,> interfaces this type implements
+                var interceptorInterfaces = interceptorType.GetInterfaces()
+                    .Where(i => i.IsGenericType &&
+                               (i.GetGenericTypeDefinition() == typeof(IInterceptor<,>) ||
+                                i.GetGenericTypeDefinition() == typeof(ICommandInterceptor<,>) ||
+                                i.GetGenericTypeDefinition() == typeof(IQueryInterceptor<,>)));
+
+                foreach (var @interface in interceptorInterfaces)
+                {
+                    // Register each interceptor interface implementation
+                    // Multiple registrations of the same interface are collected via IEnumerable<> resolution
+                    services.AddScoped(@interface, interceptorType);
+                }
             }
         }
 

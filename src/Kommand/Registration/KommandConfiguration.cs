@@ -247,8 +247,23 @@ public class KommandConfiguration
     /// Validators are always registered as Scoped to support async validation with repositories.
     /// </summary>
     /// <remarks>
-    /// This is a forward reference - IValidator interface doesn't exist yet.
-    /// It will be implemented in Phase 4 (Validation System).
+    /// <para>
+    /// This method discovers all classes that implement <c>IValidator&lt;T&gt;</c> and registers
+    /// them in the DI container. Multiple validators can be registered for the same request type,
+    /// and they will all execute when validation is enabled.
+    /// </para>
+    /// <para>
+    /// <strong>Lifetime:</strong><br/>
+    /// Validators are always registered with <see cref="ServiceLifetime.Scoped"/> lifetime,
+    /// regardless of the <see cref="DefaultHandlerLifetime"/> setting. This is because validators
+    /// often need to inject scoped services like repositories or DbContext for async validation
+    /// (e.g., checking if an email already exists in the database).
+    /// </para>
+    /// <para>
+    /// <strong>Multiple Validators:</strong><br/>
+    /// If multiple validators are registered for the same request type, the ValidationInterceptor
+    /// will execute all of them sequentially and collect all errors before throwing ValidationException.
+    /// </para>
     /// </remarks>
     [RequiresUnreferencedCode("Uses reflection for type discovery")]
     private void RegisterValidators(Assembly assembly)
@@ -257,13 +272,13 @@ public class KommandConfiguration
             .Where(t => t.IsClass && !t.IsAbstract)
             .Where(t => t.GetInterfaces().Any(i =>
                 i.IsGenericType &&
-                i.Name == "IValidator`1")) // Name-based check since interface doesn't exist yet
+                i.GetGenericTypeDefinition() == typeof(IValidator<>)))
             .ToList();
 
         foreach (var validatorType in validators)
         {
             var interfaces = validatorType.GetInterfaces()
-                .Where(i => i.IsGenericType && i.Name == "IValidator`1");
+                .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>));
 
             foreach (var @interface in interfaces)
             {
@@ -353,34 +368,85 @@ public class KommandConfiguration
     /// <returns>The current configuration instance for fluent chaining</returns>
     /// <remarks>
     /// <para>
-    /// This is a convenience method that will automatically add the ValidationInterceptor
-    /// when validation support is implemented in Phase 4. For now, this is a placeholder
-    /// that does nothing but allows user code to be written in preparation for future functionality.
+    /// This method adds <c>ValidationInterceptor&lt;,&gt;</c> to the interceptor pipeline,
+    /// which will automatically execute all registered validators for each request before
+    /// the handler executes.
     /// </para>
     /// <para>
-    /// When validation is implemented, calling this method will:
+    /// <strong>What This Does:</strong>
     /// <list type="bullet">
-    /// <item><description>Add ValidationInterceptor to the interceptor pipeline</description></item>
-    /// <item><description>Execute all registered IValidator&lt;T&gt; implementations for each request</description></item>
-    /// <item><description>Throw ValidationException if any validation fails</description></item>
-    /// <item><description>Short-circuit handler execution on validation failure</description></item>
+    /// <item><description>Adds ValidationInterceptor to the interceptor pipeline</description></item>
+    /// <item><description>Resolves all IValidator&lt;T&gt; implementations for each request from DI</description></item>
+    /// <item><description>Executes all validators sequentially (not in parallel)</description></item>
+    /// <item><description>Collects ALL errors from ALL validators (not fail-fast)</description></item>
+    /// <item><description>Throws <see cref="ValidationException"/> with all errors if any validation fails</description></item>
+    /// <item><description>Short-circuits handler execution on validation failure</description></item>
     /// </list>
+    /// </para>
+    /// <para>
+    /// <strong>Prerequisites:</strong><br/>
+    /// Validators must be registered in assemblies scanned via <see cref="RegisterHandlersFromAssembly"/>.
+    /// The method automatically discovers and registers validators during assembly scanning.
+    /// </para>
+    /// <para>
+    /// <strong>Performance:</strong><br/>
+    /// If no validators are registered for a request type, the ValidationInterceptor has minimal
+    /// overhead (just an empty collection check). This allows you to enable validation globally
+    /// without performance impact on requests that don't need validation.
+    /// </para>
+    /// <para>
+    /// <strong>Order Matters:</strong><br/>
+    /// Interceptors execute in the order they are added. If you want validation to run before
+    /// other interceptors (like logging), call <c>WithValidation()</c> first.
     /// </para>
     /// </remarks>
     /// <example>
+    /// <strong>Example: Basic Setup</strong>
+    /// <code>
+    /// services.AddKommand(config =>
+    /// {
+    ///     // Discovers both handlers and validators
+    ///     config.RegisterHandlersFromAssembly(typeof(Program).Assembly);
+    ///
+    ///     // Enables automatic validation
+    ///     config.WithValidation();
+    /// });
+    /// </code>
+    ///
+    /// <strong>Example: With Multiple Interceptors</strong>
     /// <code>
     /// services.AddKommand(config =>
     /// {
     ///     config.RegisterHandlersFromAssembly(typeof(Program).Assembly);
-    ///     config.WithValidation(); // Enables automatic validation
+    ///
+    ///     // Validation runs first (outermost)
+    ///     config.WithValidation();
+    ///
+    ///     // Then logging (innermost)
+    ///     config.AddInterceptor&lt;LoggingInterceptor&gt;();
+    /// });
+    ///
+    /// // Execution order:
+    /// // → Validation (runs first)
+    /// //   → Logging (runs second)
+    /// //     → Handler
+    /// </code>
+    ///
+    /// <strong>Example: Validation with Activity Tracing</strong>
+    /// <code>
+    /// services.AddKommand(config =>
+    /// {
+    ///     config.RegisterHandlersFromAssembly(typeof(Program).Assembly);
+    ///     config.WithValidation();
+    ///     config.WithActivityTracing(); // Built-in OpenTelemetry tracing
     /// });
     /// </code>
     /// </example>
     public KommandConfiguration WithValidation()
     {
-        // TODO: In Phase 4, this will add ValidationInterceptor to the pipeline
-        // For now, this is a placeholder that does nothing but allows forward compatibility
-        // return AddInterceptor<ValidationInterceptor>();
+        // Add ValidationInterceptor as an open generic type
+        // The DI container will create closed generic instances for each request type
+        AddInterceptor(typeof(ValidationInterceptor<,>));
         return this;
     }
 }
