@@ -167,6 +167,9 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
+        // Clear any activities captured during setup (from parallel tests)
+        activities.Clear();
+
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
