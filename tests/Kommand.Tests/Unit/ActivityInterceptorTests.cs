@@ -241,6 +241,9 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
+        // Clear any activities captured during setup (from parallel tests)
+        activities.Clear();
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await mediator.SendAsync(new FailingCommand(), CancellationToken.None));
