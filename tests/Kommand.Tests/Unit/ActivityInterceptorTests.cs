@@ -1,5 +1,6 @@
 namespace Kommand.Tests.Unit;
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Kommand;
 using Kommand.Abstractions;
@@ -49,7 +50,7 @@ public class ActivityInterceptorTests
     public async Task WhenOTELConfigured_ShouldCreateActivity()
     {
         // Arrange
-        var activities = new List<Activity>();
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Kommand",
@@ -72,7 +73,7 @@ public class ActivityInterceptorTests
 
         // Assert
         Assert.Single(activities);
-        Assert.NotNull(activities[0]);
+        Assert.NotNull(activities.First());
     }
 
     /// <summary>
@@ -82,7 +83,7 @@ public class ActivityInterceptorTests
     public async Task ForCommand_ShouldUseCorrectActivityName()
     {
         // Arrange
-        var activities = new List<Activity>();
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Kommand",
@@ -105,7 +106,7 @@ public class ActivityInterceptorTests
 
         // Assert
         Assert.Single(activities);
-        Assert.Equal("Command.TestCommand", activities[0].DisplayName);
+        Assert.Equal("Command.TestCommand", activities.First().DisplayName);
     }
 
     /// <summary>
@@ -115,7 +116,7 @@ public class ActivityInterceptorTests
     public async Task ForQuery_ShouldUseCorrectActivityName()
     {
         // Arrange
-        var activities = new List<Activity>();
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Kommand",
@@ -149,7 +150,7 @@ public class ActivityInterceptorTests
     public async Task ShouldSetRequiredTags()
     {
         // Arrange
-        var activities = new List<Activity>();
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Kommand",
@@ -172,7 +173,7 @@ public class ActivityInterceptorTests
 
         // Assert
         Assert.Single(activities);
-        var activity = activities[0];
+        var activity = activities.First();
 
         // Verify required tags
         Assert.Equal("Command", activity.GetTagItem("kommand.request.type"));
@@ -187,7 +188,7 @@ public class ActivityInterceptorTests
     public async Task OnSuccess_ShouldSetStatusOk()
     {
         // Arrange
-        var activities = new List<Activity>();
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Kommand",
@@ -223,7 +224,7 @@ public class ActivityInterceptorTests
     public async Task OnException_ShouldSetStatusError()
     {
         // Arrange
-        var activities = new List<Activity>();
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Kommand",
@@ -269,7 +270,7 @@ public class ActivityInterceptorTests
     public async Task ShouldMeasureDuration()
     {
         // Arrange
-        var activities = new List<Activity>();
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Kommand",
