@@ -5,7 +5,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 
 **Important**: This is for a **standalone repository** called `kommand/`, separate from the Atherio monorepo.
 
-**Overall Progress**: 14/52 tasks completed (26.9%)
+**Overall Progress**: 15/52 tasks completed (28.8%)
 
 **Reference**: All tasks align with `MEDIATOR_ARCHITECTURE_PLAN.md` sections.
 
@@ -1002,7 +1002,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 1.15: Create Test Project and Write Basic Tests
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create a single test project with both unit and integration tests (Architecture Doc Section 12).
 
@@ -1159,16 +1159,16 @@ This document contains a granular task breakdown for implementing the Kommand li
 **Future dependencies**: Pattern for integration tests in later phases.
 
 **Completion Checklist**:
-- [ ] `Kommand.Tests` project created and added to solution
-- [ ] Project references Kommand and required packages (including NSubstitute)
-- [ ] `Integration/` and `Unit/` folders created
-- [ ] All three integration test methods implemented
-- [ ] Test command, query, and handlers created
-- [ ] Test notification and handlers created
-- [ ] Tests use full DI container (realistic scenario)
-- [ ] All tests pass: `dotnet test`
-- [ ] Tests use FluentAssertions
-- [ ] Tests follow AAA pattern
+- [x] `Kommand.Tests` project created and added to solution
+- [x] Project references Kommand and required packages (including NSubstitute)
+- [x] `Integration/` and `Unit/` folders created
+- [x] All integration test methods implemented (6 tests total)
+- [x] Test command, query, and handlers created
+- [x] Test notification and handlers created
+- [x] Tests use full DI container (realistic scenario)
+- [x] All tests pass: `dotnet test` (6/6 passed)
+- [x] Tests use built-in xUnit assertions (Assert.Equal, Assert.NotNull, etc.)
+- [x] Tests follow AAA pattern
 
 ---
 

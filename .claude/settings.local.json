@@ -7,7 +7,20 @@
       "Bash(dotnet build:*)",
       "WebSearch",
       "WebFetch(domain:devblogs.microsoft.com)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(dir:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet list:*)",
+      "Bash(if [ -d \"tests\" ])",
+      "Bash(then echo \"tests directory exists\")",
+      "Bash(else mkdir tests)",
+      "Bash(fi)",
+      "Bash(dotnet add:*)",
+      "Bash(del:*)",
+      "Bash(rm:*)",
+      "Bash(dotnet test:*)"
     ],
     "deny": [],
     "ask": []

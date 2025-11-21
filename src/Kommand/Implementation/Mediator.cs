@@ -1,3 +1,4 @@
+using System.Reflection;
 using Kommand.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -54,7 +55,7 @@ internal sealed class Mediator : IMediator
     /// <returns>The result from the command handler</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="command"/> is null</exception>
     /// <exception cref="InvalidOperationException">Thrown when no handler is registered for the command type</exception>
-    public Task<TResponse> SendAsync<TResponse>(
+    public async Task<TResponse> SendAsync<TResponse>(
         ICommand<TResponse> command,
         CancellationToken cancellationToken = default)
     {
@@ -71,8 +72,18 @@ internal sealed class Mediator : IMediator
 
         // Invoke HandleAsync using reflection
         var handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand<TResponse>, TResponse>.HandleAsync));
-        var task = (Task<TResponse>)handleMethod!.Invoke(handler, new object[] { command, cancellationToken })!;
-        return task;
+
+        try
+        {
+            var task = (Task<TResponse>)handleMethod!.Invoke(handler, new object[] { command, cancellationToken })!;
+            return await task;
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException != null)
+        {
+            // Unwrap TargetInvocationException and throw the actual handler exception
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            throw; // This line is unreachable but required for compiler
+        }
     }
 
     /// <summary>
@@ -116,7 +127,7 @@ internal sealed class Mediator : IMediator
     /// <returns>The data from the query handler</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="query"/> is null</exception>
     /// <exception cref="InvalidOperationException">Thrown when no handler is registered for the query type</exception>
-    public Task<TResponse> QueryAsync<TResponse>(
+    public async Task<TResponse> QueryAsync<TResponse>(
         IQuery<TResponse> query,
         CancellationToken cancellationToken = default)
     {
@@ -133,8 +144,18 @@ internal sealed class Mediator : IMediator
 
         // Invoke HandleAsync using reflection
         var handleMethod = handlerType.GetMethod(nameof(IQueryHandler<IQuery<TResponse>, TResponse>.HandleAsync));
-        var task = (Task<TResponse>)handleMethod!.Invoke(handler, [query, cancellationToken])!;
-        return task;
+
+        try
+        {
+            var task = (Task<TResponse>)handleMethod!.Invoke(handler, [query, cancellationToken])!;
+            return await task;
+        }
+        catch (TargetInvocationException ex) when (ex.InnerException != null)
+        {
+            // Unwrap TargetInvocationException and throw the actual handler exception
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            throw; // This line is unreachable but required for compiler
+        }
     }
 
     /// <summary>
