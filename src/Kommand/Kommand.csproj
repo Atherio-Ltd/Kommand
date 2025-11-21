@@ -11,18 +11,20 @@
 
     <!-- Package metadata -->
     <PackageId>Kommand</PackageId>
-    <Version>0.1.0-alpha</Version>
+    <Version>1.0.0-alpha.1</Version>
     <Authors>Dan Patrascu-Baba</Authors>
     <Company>Atherio</Company>
-    <Description>A free and open source mediator library for .NET8+ with built-in OpenTelemetry support, interceptors, validation pipeline and zero external dependencies.</Description>
-    <PackageTags>cqrs;mediator;command;query;notification;event;validation;interceptor;opentelemetry;otel;dotnet;dotnet8</PackageTags>
+    <Description>A lightweight, production-ready CQRS mediator for .NET 8+ with built-in OpenTelemetry support. Targets .NET 8 LTS (forward compatible with .NET 9, 10+). Zero external dependencies except DI abstractions. MIT License.</Description>
+    <PackageTags>cqrs;mediator;dotnet;opentelemetry;clean-architecture;ddd;validation;command;query;event;interceptor</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/atherio-org/Kommand</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/Atherio-Ltd/Kommand</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>See CHANGELOG.md for full release notes</PackageReleaseNotes>
     <Copyright>Copyright (c) 2025 Atherio</Copyright>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 
     <!-- Repository (for SourceLink) -->
-    <RepositoryUrl>https://github.com/atherio-org/Kommand</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Atherio-Ltd/Kommand.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

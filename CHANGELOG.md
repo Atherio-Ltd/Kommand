@@ -113,36 +113,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### License
 - **MIT License** - Free and open-source forever
   - No commercial restrictions
-  - Community-owned and maintained
-  - Alternative to MediatR with identical MIT licensing
+  - Open source and community-friendly
 
 ---
 
 ## Release Notes
 
-### Why Kommand?
+### About Kommand
 
-Kommand is a production-ready CQRS/Mediator library created as a free, MIT-licensed alternative to MediatR. It provides:
+Kommand is a production-ready CQRS/Mediator library originally developed for internal use at Atherio. After using it successfully in production, we decided to open source it to benefit the .NET community.
 
-- Explicit CQRS semantics (ICommand vs IQuery) instead of generic IRequest
+**Key Design Principles:**
+- Explicit CQRS semantics (ICommand vs IQuery) for clearer intent
 - Built-in OpenTelemetry integration with zero configuration
-- Custom validation system without FluentValidation dependency
+- Custom validation system with zero external dependencies
 - Scoped lifetime by default (better for DbContext and transaction management)
 - Single package with comprehensive features
 
-### Migration from MediatR
-
-Kommand uses similar patterns to MediatR but with enhanced semantics:
-
-| MediatR | Kommand | Notes |
-|---------|---------|-------|
-| `IRequest<T>` | `ICommand<T>` or `IQuery<T>` | Explicit CQRS intent |
-| `IRequestHandler<,>` | `ICommandHandler<,>` or `IQueryHandler<,>` | Clearer semantics |
-| `INotification` | `INotification` | Same interface |
-| Transient handlers | Scoped handlers | Better DbContext support |
-| Pipeline behaviors | Interceptors | More flexible API |
-| FluentValidation | Built-in validation | Zero dependencies |
-| - | Built-in OTEL | Zero-config observability |
+**Maintenance:** Kommand is primarily maintained to serve Atherio's internal requirements. Development priorities are driven by our internal needs, though we welcome community contributions.
 
 ### Getting Started
 
