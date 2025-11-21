@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using Kommand;
 using Kommand.Abstractions;
 using Kommand.Implementation;
 using Kommand.Registration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -167,9 +169,22 @@ public static class ServiceCollectionExtensions
 
         // Register user-defined interceptors
         // Interceptors are registered as Scoped to allow state management within a request
+        // We register both the concrete type AND all IInterceptor<,> interfaces it implements
         foreach (var interceptorType in config.InterceptorTypes)
         {
-            services.AddScoped(interceptorType);
+            // Find all IInterceptor<,> interfaces this type implements
+            var interceptorInterfaces = interceptorType.GetInterfaces()
+                .Where(i => i.IsGenericType &&
+                           (i.GetGenericTypeDefinition() == typeof(IInterceptor<,>) ||
+                            i.GetGenericTypeDefinition() == typeof(ICommandInterceptor<,>) ||
+                            i.GetGenericTypeDefinition() == typeof(IQueryInterceptor<,>)));
+
+            foreach (var @interface in interceptorInterfaces)
+            {
+                // Register each interceptor interface implementation
+                // Multiple registrations of the same interface are collected via IEnumerable<> resolution
+                services.AddScoped(@interface, interceptorType);
+            }
         }
 
         return services;

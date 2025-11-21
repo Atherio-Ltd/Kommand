@@ -1175,7 +1175,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ## Phase 2: Interceptor System (8 tasks)
 
 ### Task 2.1: Implement Interceptor Abstractions
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create interceptor interfaces for cross-cutting concerns (Architecture Doc Section 3, lines 175-210).
 
@@ -1278,7 +1278,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 2.2: Integrate Interceptors into Mediator - Part 1 (Pipeline Building)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Modify Mediator to build and execute interceptor pipeline (Architecture Doc Section 3).
 
@@ -1339,7 +1339,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 2.3: Integrate Interceptors into Mediator - Part 2 (Use Pipeline)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Modify SendAsync and QueryAsync to use interceptor pipeline.
 
@@ -1397,7 +1397,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 2.4: Create Example Logging Interceptor (Documentation Only)
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Create reference implementation for documentation (Architecture Doc Section 3, lines 226-245).
 
@@ -1496,7 +1496,7 @@ This document contains a granular task breakdown for implementing the Kommand li
 ---
 
 ### Task 2.5: Write Unit Tests for Interceptor Pipeline
-**Status**: [ ] Not Started
+**Status**: [x] Completed
 
 **Objective**: Test interceptor execution and ordering (Architecture Doc Section 12).
 

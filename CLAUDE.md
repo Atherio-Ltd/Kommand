@@ -54,7 +54,7 @@ Detailed task lists are in:
 
 - [x] **Phase 1: Core Foundation** (15 tasks) - ✅ COMPLETED
   - Create project structure, implement `ICommand`/`IQuery`/`IMediator`, basic handler resolution
-- [ ] **Phase 2: Interceptor System** (8 tasks)
+- [x] **Phase 2: Interceptor System** (5 tasks completed) - ✅ COMPLETED
   - Implement interceptor pipeline for cross-cutting concerns
 - [ ] **Phase 3: OpenTelemetry Integration** (6 tasks)
   - Built-in `ActivityInterceptor` and `MetricsInterceptor` with auto-registration
@@ -65,7 +65,7 @@ Detailed task lists are in:
 - [ ] **Phase 6: Documentation & Release** (8 tasks)
   - README, guides, CI/CD, NuGet publishing
 
-**Next Task**: Task 2.1 (Implement Interceptor Abstractions)
+**Next Task**: Task 3.1 (OpenTelemetry Integration - awaiting Phase 3 start)
 
 ## Repository Structure (Target)
 

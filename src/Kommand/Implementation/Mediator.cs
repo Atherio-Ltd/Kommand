@@ -70,20 +70,28 @@ internal sealed class Mediator : IMediator
                 $"No handler registered for command type '{commandType.Name}'. " +
                 $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
 
-        // Invoke HandleAsync using reflection
+        // Get handler method for invocation
         var handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand<TResponse>, TResponse>.HandleAsync));
 
-        try
+        // Create handler function that will be wrapped by interceptor pipeline
+        Func<Task<TResponse>> handlerFunc = async () =>
         {
-            var task = (Task<TResponse>)handleMethod!.Invoke(handler, new object[] { command, cancellationToken })!;
-            return await task;
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException != null)
-        {
-            // Unwrap TargetInvocationException and throw the actual handler exception
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-            throw; // This line is unreachable but required for compiler
-        }
+            try
+            {
+                var task = (Task<TResponse>)handleMethod!.Invoke(handler, new object[] { command, cancellationToken })!;
+                return await task;
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException != null)
+            {
+                // Unwrap TargetInvocationException and throw the actual handler exception
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw; // This line is unreachable but required for compiler
+            }
+        };
+
+        // Build and execute interceptor pipeline using the actual command type
+        var pipeline = BuildPipeline(commandType, typeof(TResponse), command, handlerFunc, cancellationToken);
+        return await pipeline();
     }
 
     /// <summary>
@@ -113,9 +121,28 @@ internal sealed class Mediator : IMediator
                 $"No handler registered for command type '{commandType.Name}'. " +
                 $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
 
-        // Invoke HandleAsync using reflection
+        // Get handler method for invocation
         var handleMethod = handlerType.GetMethod(nameof(ICommandHandler<ICommand, Unit>.HandleAsync));
-        await (Task<Unit>)handleMethod!.Invoke(handler, [command, cancellationToken])!;
+
+        // Create handler function that will be wrapped by interceptor pipeline
+        Func<Task<Unit>> handlerFunc = async () =>
+        {
+            try
+            {
+                var task = (Task<Unit>)handleMethod!.Invoke(handler, [command, cancellationToken])!;
+                return await task;
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException != null)
+            {
+                // Unwrap TargetInvocationException and throw the actual handler exception
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw; // This line is unreachable but required for compiler
+            }
+        };
+
+        // Build and execute interceptor pipeline using the actual command type
+        var pipeline = BuildPipeline(commandType, typeof(Unit), command, handlerFunc, cancellationToken);
+        await pipeline();
     }
 
     /// <summary>
@@ -142,20 +169,28 @@ internal sealed class Mediator : IMediator
                 $"No handler registered for query type '{queryType.Name}'. " +
                 $"Ensure the handler is registered in the DI container using RegisterHandlersFromAssembly().");
 
-        // Invoke HandleAsync using reflection
+        // Get handler method for invocation
         var handleMethod = handlerType.GetMethod(nameof(IQueryHandler<IQuery<TResponse>, TResponse>.HandleAsync));
 
-        try
+        // Create handler function that will be wrapped by interceptor pipeline
+        Func<Task<TResponse>> handlerFunc = async () =>
         {
-            var task = (Task<TResponse>)handleMethod!.Invoke(handler, [query, cancellationToken])!;
-            return await task;
-        }
-        catch (TargetInvocationException ex) when (ex.InnerException != null)
-        {
-            // Unwrap TargetInvocationException and throw the actual handler exception
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
-            throw; // This line is unreachable but required for compiler
-        }
+            try
+            {
+                var task = (Task<TResponse>)handleMethod!.Invoke(handler, [query, cancellationToken])!;
+                return await task;
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException != null)
+            {
+                // Unwrap TargetInvocationException and throw the actual handler exception
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw; // This line is unreachable but required for compiler
+            }
+        };
+
+        // Build and execute interceptor pipeline using the actual query type
+        var pipeline = BuildPipeline(queryType, typeof(TResponse), query, handlerFunc, cancellationToken);
+        return await pipeline();
     }
 
     /// <summary>
@@ -218,5 +253,100 @@ internal sealed class Mediator : IMediator
                 // TODO: Add logging in future task to track these failures
             }
         }
+    }
+
+    /// <summary>
+    /// Builds the interceptor pipeline for a request, wrapping the handler execution with registered interceptors.
+    /// </summary>
+    /// <typeparam name="TResponse">The type of response returned by the handler</typeparam>
+    /// <param name="requestType">The runtime type of the request (e.g., TestCommand, not ICommand)</param>
+    /// <param name="responseType">The runtime type of the response</param>
+    /// <param name="request">The request instance</param>
+    /// <param name="handlerFunc">Function that invokes the actual handler</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A delegate that executes the complete pipeline (interceptors + handler)</returns>
+    /// <remarks>
+    /// <para>
+    /// This method constructs the interceptor pipeline by wrapping the handler function with all
+    /// registered interceptors for the request type. Interceptors are resolved from the DI container
+    /// and built into a chain where each interceptor can execute logic before and after calling the next.
+    /// </para>
+    /// <para>
+    /// <strong>Pipeline Construction Order:</strong><br/>
+    /// Interceptors are built in <strong>reverse order</strong> to ensure correct execution flow.
+    /// If interceptors are registered as: [Logging, Validation, Metrics]<br/>
+    /// They are built as: Handler → Metrics → Validation → Logging<br/>
+    /// So execution flows: Logging (enter) → Validation (enter) → Metrics (enter) → Handler → Metrics (exit) → Validation (exit) → Logging (exit)
+    /// </para>
+    /// <para>
+    /// <strong>Interceptor Resolution:</strong><br/>
+    /// The method resolves all interceptors that match <c>IInterceptor&lt;TRequest, TResponse&gt;</c>.
+    /// This includes both generic interceptors and type-specific interceptors (ICommandInterceptor, IQueryInterceptor)
+    /// since they all implement the base IInterceptor interface internally.
+    /// </para>
+    /// <para>
+    /// <strong>No Interceptors Scenario:</strong><br/>
+    /// If no interceptors are registered for the request type, the method returns a delegate that
+    /// directly invokes the handler function without any wrapping. This ensures zero overhead when
+    /// interceptors are not used.
+    /// </para>
+    /// </remarks>
+    private RequestHandlerDelegate<TResponse> BuildPipeline<TResponse>(
+        Type requestType,
+        Type responseType,
+        object request,
+        Func<Task<TResponse>> handlerFunc,
+        CancellationToken cancellationToken)
+    {
+        // Start with the handler as the innermost delegate
+        RequestHandlerDelegate<TResponse> pipeline = () => handlerFunc();
+
+        // Resolve all interceptors for this request type
+        // Get IEnumerable<IInterceptor<TRequest, TResponse>> from the container
+        // Use the actual request type (e.g., TestCommand), not the base interface (e.g., ICommand)
+        var interceptorType = typeof(IInterceptor<,>).MakeGenericType(requestType, responseType);
+        var enumerableType = typeof(IEnumerable<>).MakeGenericType(interceptorType);
+        var interceptorsEnumerable = _serviceProvider.GetService(enumerableType) as System.Collections.IEnumerable;
+
+        // If no interceptors registered, return handler directly (zero overhead)
+        if (interceptorsEnumerable == null)
+        {
+            return pipeline;
+        }
+
+        // Convert to list for reverse iteration
+        var interceptors = interceptorsEnumerable.Cast<object>().ToList();
+        if (!interceptors.Any())
+        {
+            return pipeline;
+        }
+
+        // Build pipeline in reverse order (last registered interceptor wraps handler)
+        // This ensures first registered interceptor is outermost (executes first on entry, last on exit)
+        foreach (var interceptor in interceptors.AsEnumerable().Reverse())
+        {
+            var currentPipeline = pipeline; // Capture current pipeline for closure
+            var handleMethod = interceptorType.GetMethod(nameof(IInterceptor<IRequest<TResponse>, TResponse>.HandleAsync));
+
+            // Wrap current pipeline with this interceptor
+            pipeline = () =>
+            {
+                try
+                {
+                    var task = (Task<TResponse>)handleMethod!.Invoke(
+                        interceptor,
+                        new object[] { request, currentPipeline, cancellationToken })!;
+                    return task;
+                }
+                catch (TargetInvocationException ex) when (ex.InnerException != null)
+                {
+                    // Unwrap TargetInvocationException from reflection and preserve original stack trace
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                    throw; // Unreachable but required for compiler
+                }
+            };
+        }
+
+        return pipeline;
     }
 }
