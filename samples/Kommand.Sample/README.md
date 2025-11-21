@@ -259,13 +259,29 @@ In a real application, you would:
    ```
 
 3. **Configure Production OpenTelemetry** exporters
+
+   **Note:** This sample uses `AddConsoleExporter()` for demonstration purposes only. In production, use exporters appropriate for your infrastructure:
+
    ```csharp
+   // Production: Jaeger (APM)
    .WithTracing(tracing => tracing
        .AddSource("Kommand")
-       .AddJaegerExporter())  // Send traces to Jaeger
+       .AddJaegerExporter())
+
+   // Production: Application Insights (Azure)
+   .WithTracing(tracing => tracing
+       .AddSource("Kommand")
+       .AddAzureMonitorTraceExporter())
+
+   // Production: OTLP (Grafana, Datadog, New Relic, etc.)
+   .WithTracing(tracing => tracing
+       .AddSource("Kommand")
+       .AddOtlpExporter())
+
+   // Production: Prometheus (metrics)
    .WithMetrics(metrics => metrics
        .AddMeter("Kommand")
-       .AddPrometheusExporter())  // Expose metrics for Prometheus
+       .AddPrometheusExporter())
    ```
 
 ## Learning Resources

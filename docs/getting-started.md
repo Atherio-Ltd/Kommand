@@ -426,42 +426,111 @@ builder.Services.AddKommand(config =>
 
 ## Configuring OpenTelemetry (Optional)
 
-Kommand includes built-in OpenTelemetry support for distributed tracing and metrics.
+Kommand includes **built-in OpenTelemetry support** that works automatically - you just need to configure your preferred exporter.
 
-### Add OpenTelemetry Packages
+**Important:** OpenTelemetry configuration is **completely optional**. If you don't configure it, Kommand still works perfectly with only ~10-50ns overhead per request.
+
+### Choose Your Exporter
+
+OpenTelemetry supports many exporters. Choose based on your infrastructure:
+
+#### Option 1: Console (Development/Debugging)
 
 ```bash
 dotnet add package OpenTelemetry.Extensions.Hosting
 dotnet add package OpenTelemetry.Exporter.Console
 ```
 
-### Configure OpenTelemetry
-
-In your `Program.cs`:
-
 ```csharp
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using OpenTelemetry.Metrics;
-
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService(
-        serviceName: "MyApp",
-        serviceVersion: "1.0.0"))
+    .ConfigureResource(resource => resource.AddService("MyApp"))
     .WithTracing(tracing => tracing
         .AddSource("Kommand")
-        .AddAspNetCoreInstrumentation()
         .AddConsoleExporter())
     .WithMetrics(metrics => metrics
         .AddMeter("Kommand")
-        .AddAspNetCoreInstrumentation()
         .AddConsoleExporter());
 ```
 
-**What you get:**
+#### Option 2: Jaeger (Production APM)
+
+```bash
+dotnet add package OpenTelemetry.Extensions.Hosting
+dotnet add package OpenTelemetry.Exporter.Jaeger
+```
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("Kommand")
+        .AddJaegerExporter(options =>
+        {
+            options.AgentHost = "localhost";
+            options.AgentPort = 6831;
+        }));
+```
+
+#### Option 3: Application Insights (Azure)
+
+```bash
+dotnet add package OpenTelemetry.Extensions.Hosting
+dotnet add package Azure.Monitor.OpenTelemetry.Exporter
+```
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("Kommand")
+        .AddAzureMonitorTraceExporter(options =>
+        {
+            options.ConnectionString = configuration["ApplicationInsights:ConnectionString"];
+        }));
+```
+
+#### Option 4: OTLP (OpenTelemetry Protocol)
+
+Works with many backends (Grafana, Datadog, New Relic, etc.)
+
+```bash
+dotnet add package OpenTelemetry.Extensions.Hosting
+dotnet add package OpenTelemetry.Exporter.OpenTelemetryProtocol
+```
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("Kommand")
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri("http://localhost:4317");
+        }));
+```
+
+#### Option 5: Zipkin
+
+```bash
+dotnet add package OpenTelemetry.Extensions.Hosting
+dotnet add package OpenTelemetry.Exporter.Zipkin
+```
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("Kommand")
+        .AddZipkinExporter(options =>
+        {
+            options.Endpoint = new Uri("http://localhost:9411/api/v2/spans");
+        }));
+```
+
+### What Kommand Exports
+
+**When you configure any exporter above**, Kommand automatically exports:
+
 - **Traces**: Activity spans for each command/query with detailed tags
 - **Metrics**: Request counts, durations, validation failures
-- **Zero overhead when not configured**: ~10-50ns per request
+
+**When you don't configure OpenTelemetry:** Minimal overhead (~10-50ns per request)
 
 ### Exported Data
 

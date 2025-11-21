@@ -212,9 +212,12 @@ config.AddInterceptor(typeof(LoggingInterceptor<,>));
 
 ### OpenTelemetry Integration
 
-Kommand includes built-in OpenTelemetry support. Just configure OTEL in your application:
+Kommand includes built-in OpenTelemetry support with **zero configuration required**. The library automatically creates traces and metrics - you just need to configure your preferred exporter.
+
+**Optional:** Configure OpenTelemetry in your application (choose your exporter):
 
 ```csharp
+// Example 1: Console (for development/debugging)
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService("MyApp"))
     .WithTracing(tracing => tracing
@@ -223,13 +226,34 @@ builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics => metrics
         .AddMeter("Kommand")
         .AddConsoleExporter());
+
+// Example 2: Jaeger (production APM)
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("Kommand")
+        .AddJaegerExporter());
+
+// Example 3: Application Insights (Azure)
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("Kommand")
+        .AddAzureMonitorTraceExporter(options =>
+        {
+            options.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+        }));
+
+// Example 4: OTLP (OpenTelemetry Protocol - works with many backends)
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource("Kommand")
+        .AddOtlpExporter());
 ```
 
-Kommand automatically exports:
-- **Traces**: Activity spans for each command/query with tags
+**What Kommand exports:**
+- **Traces**: Activity spans for each command/query with detailed tags
 - **Metrics**: Request counts, durations, and validation failures
 
-When OTEL is not configured, the overhead is ~10-50ns per request.
+**When OTEL is not configured:** ~10-50ns overhead per request (negligible).
 
 ### Domain Events (Pub/Sub)
 
