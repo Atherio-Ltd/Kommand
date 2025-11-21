@@ -9,11 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 /// Unit tests for ActivityInterceptor to verify OpenTelemetry distributed tracing integration.
 /// Tests zero-config pattern, activity creation, naming conventions, and error handling.
 /// </summary>
-/// <remarks>
-/// These tests use a global ActivityListener, so they must run sequentially to avoid
-/// parallel tests interfering with each other's activity collections.
-/// </remarks>
-[Collection("ActivityInterceptor")]
 public class ActivityInterceptorTests
 {
     /// <summary>
@@ -41,10 +36,9 @@ public class ActivityInterceptorTests
 
         // Assert
         Assert.Equal("test-handled", result);
-        // With no OTEL configured, overhead should be minimal (< 500ms for a simple command)
-        // Note: Generous threshold accounts for CI variability and sequential test execution
-        Assert.True(stopwatch.ElapsedMilliseconds < 500,
-            $"Expected < 500ms, got {stopwatch.ElapsedMilliseconds}ms");
+        // With no OTEL configured, overhead should be minimal (< 50ms for a simple command)
+        Assert.True(stopwatch.ElapsedMilliseconds < 50,
+            $"Expected < 50ms, got {stopwatch.ElapsedMilliseconds}ms");
     }
 
     /// <summary>
@@ -73,16 +67,12 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
-        // Clear any activities captured during setup (from parallel tests)
-        activities.Clear();
-
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert - Filter to only TestCommand activities
-        var testActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
-        Assert.Single(testActivities);
-        Assert.NotNull(testActivities[0]);
+        // Assert
+        Assert.Single(activities);
+        Assert.NotNull(activities[0]);
     }
 
     /// <summary>
@@ -110,16 +100,12 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
-        // Clear any activities captured during setup (from parallel tests)
-        activities.Clear();
-
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert - Filter to only TestCommand activities
-        var testActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
-        Assert.Single(testActivities);
-        Assert.Equal("Command.TestCommand", testActivities[0].DisplayName);
+        // Assert
+        Assert.Single(activities);
+        Assert.Equal("Command.TestCommand", activities[0].DisplayName);
     }
 
     /// <summary>
@@ -181,16 +167,12 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
-        // Clear any activities captured during setup (from parallel tests)
-        activities.Clear();
-
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert - Filter to only TestCommand activities (other parallel tests may add activities)
-        var testActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
-        Assert.Single(testActivities);
-        var activity = testActivities[0];
+        // Assert
+        Assert.Single(activities);
+        var activity = activities[0];
 
         // Verify required tags
         Assert.Equal("Command", activity.GetTagItem("kommand.request.type"));
