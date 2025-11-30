@@ -34,7 +34,7 @@ Feature suggestions are welcome! Before creating a feature request:
 
 - **Check if the feature already exists** in the latest version
 - **Check existing feature requests** to avoid duplicates
-- **Consider if it aligns with the project goals** (see [Architecture Document](MEDIATOR_ARCHITECTURE_PLAN.md))
+- **Consider if it aligns with the project goals** (see [Architecture Document](docs/ARCHITECTURE.md))
 
 When suggesting a feature:
 
@@ -180,7 +180,7 @@ Kommand follows strict coding standards to maintain quality and consistency.
 
 ### Architecture Constraints
 
-**Must follow** (from [Architecture Document](MEDIATOR_ARCHITECTURE_PLAN.md)):
+**Must follow** (from [Architecture Document](docs/ARCHITECTURE.md)):
 
 ✅ **DO:**
 - Use `HandleAsync` for all handler methods (not just `Handle`)
@@ -278,7 +278,7 @@ When adding features, also update:
 
 ## Performance Considerations
 
-Kommand has strict performance targets (see [Architecture Document](MEDIATOR_ARCHITECTURE_PLAN.md)):
+Kommand has strict performance targets (see [Architecture Document](docs/ARCHITECTURE.md)):
 
 - **Mediator dispatch overhead**: <2 μs
 - **Per-interceptor cost**: <100 ns

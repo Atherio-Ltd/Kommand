@@ -186,5 +186,5 @@ dotnet run -c Release -- --memory
 ## References
 
 - [BenchmarkDotNet Documentation](https://benchmarkdotnet.org/articles/overview.html)
-- [Kommand Architecture Document](../../MEDIATOR_ARCHITECTURE_PLAN.md) - Section 11 (Performance)
+- [Kommand Architecture Document](../../docs/ARCHITECTURE.md) - Section 11 (Performance)
 - [.NET Performance Best Practices](https://learn.microsoft.com/en-us/dotnet/core/performance/)

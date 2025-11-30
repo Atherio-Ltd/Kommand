@@ -684,7 +684,7 @@ public async Task<User> HandleAsync(
 ## Next Steps
 
 - **Explore the [Sample Project](../samples/Kommand.Sample/)** - See all features in action
-- **Read the [Architecture Document](../MEDIATOR_ARCHITECTURE_PLAN.md)** - Understand design decisions
+- **Read the [Architecture Document](ARCHITECTURE.md)** - Understand design decisions
 - **Review [Performance Benchmarks](../tests/Kommand.Benchmarks/)** - See performance characteristics
 
 ## Need Help?

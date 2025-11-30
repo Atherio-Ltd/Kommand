@@ -293,7 +293,7 @@ In a real application, you would:
 ## Learning Resources
 
 - **Main Repository**: https://github.com/atherio-org/Kommand
-- **Architecture Documentation**: See `MEDIATOR_ARCHITECTURE_PLAN.md` in the repository root
+- **Architecture Documentation**: See `docs/ARCHITECTURE.md` in the repository
 - **CQRS Pattern**: https://martinfowler.com/bliki/CQRS.html
 - **Mediator Pattern**: https://refactoring.guru/design-patterns/mediator
 

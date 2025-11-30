@@ -304,7 +304,7 @@ See [benchmarks](tests/Kommand.Benchmarks/) for detailed performance analysis.
 ## Documentation
 
 - **[Getting Started Guide](docs/getting-started.md)** - Step-by-step tutorial
-- **[Architecture Document](MEDIATOR_ARCHITECTURE_PLAN.md)** - Complete design specification
+- **[Architecture Document](docs/ARCHITECTURE.md)** - Complete design specification
 - **[Sample Project](samples/Kommand.Sample/)** - Working example demonstrating all features
 - **[CHANGELOG](CHANGELOG.md)** - Version history and release notes
 
