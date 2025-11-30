@@ -10,8 +10,33 @@ using Microsoft.Extensions.DependencyInjection;
 /// Unit tests for ActivityInterceptor to verify OpenTelemetry distributed tracing integration.
 /// Tests zero-config pattern, activity creation, naming conventions, and error handling.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <strong>Test Isolation Strategy:</strong>
+/// ActivitySource and ActivityListener are global constructs in .NET. When tests run in parallel,
+/// multiple listeners can capture activities from other tests, causing flaky failures.
+/// </para>
+/// <para>
+/// To achieve proper isolation, each test:
+/// <list type="number">
+/// <item>Creates a parent activity with a unique TraceId</item>
+/// <item>Uses ActivityStopped (not ActivityStarted) for reliable capture after completion</item>
+/// <item>Filters captured activities by the parent's TraceId</item>
+/// </list>
+/// This ensures each test only sees activities from its own execution context.
+/// </para>
+/// <para>
+/// See: https://github.com/dotnet/runtime/issues/98854
+/// </para>
+/// </remarks>
 public class ActivityInterceptorTests
 {
+    /// <summary>
+    /// ActivitySource used to create parent activities for test isolation.
+    /// Each test creates a parent activity whose TraceId is used to filter results.
+    /// </summary>
+    private static readonly ActivitySource TestActivitySource = new("Kommand.Tests");
+
     /// <summary>
     /// Verifies that when OpenTelemetry is NOT configured (no ActivityListener registered),
     /// the interceptor has minimal overhead and does not create activities.
@@ -49,15 +74,20 @@ public class ActivityInterceptorTests
     [Fact]
     public async Task WhenOTELConfigured_ShouldCreateActivity()
     {
-        // Arrange
+        // Arrange - Use ActivityStopped for reliable capture after activity completes
         var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create a parent activity with unique TraceId for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity); // Ensure listener is working
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -71,10 +101,12 @@ public class ActivityInterceptorTests
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert - Filter to only TestCommand activities (other tests may run in parallel)
-        var testCommandActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
-        Assert.Single(testCommandActivities);
-        Assert.NotNull(testCommandActivities.First());
+        // Assert - Filter by TraceId for proper isolation from parallel tests
+        var testActivities = activities
+            .Where(a => a.TraceId == traceId && a.DisplayName == "Command.TestCommand")
+            .ToList();
+        Assert.Single(testActivities);
+        Assert.NotNull(testActivities.First());
     }
 
     /// <summary>
@@ -87,11 +119,16 @@ public class ActivityInterceptorTests
         var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create parent activity for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity);
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -105,9 +142,10 @@ public class ActivityInterceptorTests
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert
-        Assert.Single(activities);
-        Assert.Equal("Command.TestCommand", activities.First().DisplayName);
+        // Assert - Filter by TraceId
+        var testActivities = activities.Where(a => a.TraceId == traceId && a.DisplayName == "Command.TestCommand").ToList();
+        Assert.Single(testActivities);
+        Assert.Equal("Command.TestCommand", testActivities.First().DisplayName);
     }
 
     /// <summary>
@@ -120,11 +158,16 @@ public class ActivityInterceptorTests
         var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create parent activity for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity);
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -138,10 +181,10 @@ public class ActivityInterceptorTests
         // Act
         await mediator.QueryAsync(new TestQuery(42), CancellationToken.None);
 
-        // Assert - Filter to only TestQuery activities
-        var testQueryActivities = activities.Where(a => a.DisplayName == "Query.TestQuery").ToList();
-        Assert.NotEmpty(testQueryActivities);
-        Assert.Equal("Query.TestQuery", testQueryActivities.First().DisplayName);
+        // Assert - Filter by TraceId
+        var testActivities = activities.Where(a => a.TraceId == traceId && a.DisplayName == "Query.TestQuery").ToList();
+        Assert.Single(testActivities);
+        Assert.Equal("Query.TestQuery", testActivities.First().DisplayName);
     }
 
     /// <summary>
@@ -154,11 +197,16 @@ public class ActivityInterceptorTests
         var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create parent activity for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity);
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -172,9 +220,10 @@ public class ActivityInterceptorTests
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert
-        Assert.Single(activities);
-        var activity = activities.First();
+        // Assert - Filter by TraceId
+        var testActivities = activities.Where(a => a.TraceId == traceId && a.DisplayName == "Command.TestCommand").ToList();
+        Assert.Single(testActivities);
+        var activity = testActivities.First();
 
         // Verify required tags
         Assert.Equal("Command", activity.GetTagItem("kommand.request.type"));
@@ -192,11 +241,16 @@ public class ActivityInterceptorTests
         var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create parent activity for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity);
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -210,9 +264,9 @@ public class ActivityInterceptorTests
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert - Filter to only TestCommand activities with OK status
-        var testActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
-        Assert.NotEmpty(testActivities);
+        // Assert - Filter by TraceId
+        var testActivities = activities.Where(a => a.TraceId == traceId && a.DisplayName == "Command.TestCommand").ToList();
+        Assert.Single(testActivities);
         var activity = testActivities.First();
         Assert.Equal(ActivityStatusCode.Ok, activity.Status);
     }
@@ -228,11 +282,16 @@ public class ActivityInterceptorTests
         var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create parent activity for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity);
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -243,15 +302,12 @@ public class ActivityInterceptorTests
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
 
-        // Clear any activities captured during setup (from parallel tests)
-        activities.Clear();
-
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await mediator.SendAsync(new FailingCommand(), CancellationToken.None));
 
-        // Verify activity error status - Filter to only FailingCommand activities
-        var failingActivities = activities.Where(a => a.DisplayName == "Command.FailingCommand").ToList();
+        // Verify activity error status - Filter by TraceId
+        var failingActivities = activities.Where(a => a.TraceId == traceId && a.DisplayName == "Command.FailingCommand").ToList();
         Assert.Single(failingActivities);
         var activity = failingActivities[0];
         Assert.Equal(ActivityStatusCode.Error, activity.Status);
@@ -274,11 +330,16 @@ public class ActivityInterceptorTests
         var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create parent activity for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity);
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -292,12 +353,11 @@ public class ActivityInterceptorTests
         // Act - DelayedCommand has a 10ms delay
         await mediator.SendAsync(new DelayedCommand(), CancellationToken.None);
 
-        // Assert - Filter to only DelayedCommand activities with non-zero duration
-        // (may capture incomplete activities from parallel test runs)
+        // Assert - Filter by TraceId
         var delayedActivities = activities
-            .Where(a => a.DisplayName == "Command.DelayedCommand" && a.Duration.TotalMilliseconds > 0)
+            .Where(a => a.TraceId == traceId && a.DisplayName == "Command.DelayedCommand")
             .ToList();
-        Assert.NotEmpty(delayedActivities);
+        Assert.Single(delayedActivities);
         var activity = delayedActivities.First();
 
         // Activity should have measured some duration (at least a few milliseconds due to 10ms delay)
@@ -320,15 +380,20 @@ public class ActivityInterceptorTests
     [Fact]
     public async Task MultipleRequests_ShouldCreateSeparateActivities()
     {
-        // Arrange - Use concurrent collection to avoid threading issues
-        var activities = new System.Collections.Concurrent.ConcurrentBag<Activity>();
+        // Arrange
+        var activities = new ConcurrentBag<Activity>();
         using var listener = new ActivityListener
         {
-            ShouldListenTo = source => source.Name == "Kommand",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = activity => activities.Add(activity)
+            ShouldListenTo = source => source.Name == "Kommand" || source.Name == "Kommand.Tests",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activity => activities.Add(activity)
         };
         ActivitySource.AddActivityListener(listener);
+
+        // Create parent activity for test isolation
+        using var parentActivity = TestActivitySource.StartActivity("TestContext");
+        Assert.NotNull(parentActivity);
+        var traceId = parentActivity.TraceId;
 
         var services = new ServiceCollection();
         services.AddKommand(config =>
@@ -344,9 +409,9 @@ public class ActivityInterceptorTests
         await mediator.SendAsync(new TestCommand("second"), CancellationToken.None);
         await mediator.QueryAsync(new TestQuery(42), CancellationToken.None);
 
-        // Assert - Filter to only the activities we created
-        var testCommandActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
-        var testQueryActivities = activities.Where(a => a.DisplayName == "Query.TestQuery").ToList();
+        // Assert - Filter by TraceId
+        var testCommandActivities = activities.Where(a => a.TraceId == traceId && a.DisplayName == "Command.TestCommand").ToList();
+        var testQueryActivities = activities.Where(a => a.TraceId == traceId && a.DisplayName == "Query.TestQuery").ToList();
 
         Assert.Equal(2, testCommandActivities.Count);
         Assert.Single(testQueryActivities);
