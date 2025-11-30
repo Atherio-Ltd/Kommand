@@ -71,9 +71,10 @@ public class ActivityInterceptorTests
         // Act
         await mediator.SendAsync(new TestCommand("test"), CancellationToken.None);
 
-        // Assert
-        Assert.Single(activities);
-        Assert.NotNull(activities.First());
+        // Assert - Filter to only TestCommand activities (other tests may run in parallel)
+        var testCommandActivities = activities.Where(a => a.DisplayName == "Command.TestCommand").ToList();
+        Assert.Single(testCommandActivities);
+        Assert.NotNull(testCommandActivities.First());
     }
 
     /// <summary>
