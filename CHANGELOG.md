@@ -190,5 +190,5 @@ That's it! Handlers, validators, and OTEL support are automatically configured.
 
 ---
 
-[Unreleased]: https://github.com/atherio-org/Kommand/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/atherio-org/Kommand/releases/tag/v1.0.0
+[Unreleased]: https://github.com/Atherio-Ltd/Kommand/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Atherio-Ltd/Kommand/releases/tag/v1.0.0
