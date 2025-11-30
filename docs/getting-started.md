@@ -6,6 +6,7 @@ This guide will walk you through setting up Kommand and building your first comm
 
 - .NET 8.0 SDK or later (works with .NET 8, 9, 10+)
 - Basic understanding of C# and dependency injection
+- An IDE or text editor of your choice
 
 ## Installation
 
