@@ -60,8 +60,10 @@ We needed a CQRS mediator library that offered:
 ### Installation
 
 ```bash
-dotnet add package Kommand
+dotnet add package Kommand --version 1.0.0-alpha.1
 ```
+
+> **Note:** Kommand is currently in pre-release. If you're using an IDE's NuGet package manager (Visual Studio, Rider, VS Code), make sure to enable the "Include prerelease" option when searching for the package.
 
 ### Basic Usage
 
