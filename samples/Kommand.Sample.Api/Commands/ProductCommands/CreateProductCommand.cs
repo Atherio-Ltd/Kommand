@@ -1,7 +1,7 @@
 using Kommand.Abstractions;
 using Kommand.Sample.Api.Models;
 
-namespace Kommand.Sample.Api.Commands;
+namespace Kommand.Sample.Api.Commands.ProductCommands;
 
 /// <summary>
 /// Command to create a new product.
@@ -13,13 +13,3 @@ public record CreateProductCommand(
     string? Description,
     decimal Price,
     int StockQuantity) : ICommand<Product>;
-
-/// <summary>
-/// Command to update an existing product.
-/// </summary>
-public record UpdateProductCommand(
-    Guid ProductId,
-    string Name,
-    string? Description,
-    decimal Price,
-    int StockQuantity) : ICommand;

@@ -15,7 +15,7 @@ This sample showcases all Kommand capabilities in a realistic API context:
 | **Async Validation** | `POST /api/users` | Validates email uniqueness against database |
 | **Error Collection** | `POST /api/users` | Collects all validation errors (not fail-fast) |
 | **Notifications** | `POST /api/users` | Publishes domain events (email + audit handlers) |
-| **Custom Interceptors** | All endpoints | Logs request/response with timing |
+| **Type-Specific Interceptors** | All endpoints | Command-only, Query-only, or Both |
 | **OpenTelemetry** | All endpoints | Distributed tracing and metrics |
 
 ## Running the Sample
@@ -109,7 +109,9 @@ curl -X POST http://localhost:5000/api/products \
 ### Console Logs
 
 Watch the console output to see:
-- Custom interceptor logging (request/response with timing)
+- `[AUDIT]` - Command-only audit interceptor (only for POST/PUT/DELETE operations)
+- `[CACHE]` - Query-only caching interceptor (only for GET operations)
+- Logging interceptor (all requests with timing)
 - Notification handlers executing (email, audit)
 - OpenTelemetry trace spans
 
@@ -132,7 +134,7 @@ Kommand.Sample.Api/
 ├── Handlers/           # Command, Query, and Notification handlers
 ├── Validators/         # Async validators with DB checks
 ├── Notifications/      # Domain event definitions
-├── Interceptors/       # Custom logging interceptor
+├── Interceptors/       # Type-specific interceptors (command-only, query-only, both)
 ├── Infrastructure/     # Repository interfaces and in-memory implementations
 ├── Models/             # Domain models (User, Product)
 ├── DTOs/               # Request/Response DTOs
@@ -146,21 +148,40 @@ Kommand.Sample.Api/
 
 ## Key Code Highlights
 
-### Kommand Configuration (Program.cs)
+### Kommand Configuration with Type-Specific Interceptors (Program.cs)
+
+Kommand supports three types of interceptors - a unique feature that sets it apart:
 
 ```csharp
 builder.Services.AddKommand(config =>
 {
-    // Auto-discover handlers, validators, notification handlers
     config.RegisterHandlersFromAssembly(typeof(Program).Assembly);
 
-    // Add custom interceptor
+    // 1. LoggingInterceptor: Applies to ALL requests (commands + queries)
+    //    Constraint: where TRequest : IRequest<TResponse>
     config.AddInterceptor(typeof(LoggingInterceptor<,>));
 
-    // Enable validation
+    // 2. CommandAuditInterceptor: ONLY applies to commands
+    //    Constraint: where TCommand : ICommand<TResponse>
+    //    Use for: audit trails, transactions, authorization
+    config.AddInterceptor(typeof(CommandAuditInterceptor<,>));
+
+    // 3. QueryCachingInterceptor: ONLY applies to queries
+    //    Constraint: where TQuery : IQuery<TResponse>
+    //    Use for: caching, slow query monitoring, read replicas
+    config.AddInterceptor(typeof(QueryCachingInterceptor<,>));
+
     config.WithValidation();
 });
 ```
+
+### Interceptor Types
+
+| Interface | Constraint | Use Case |
+|-----------|-----------|----------|
+| `IInterceptor<TRequest, TResponse>` | `IRequest<TResponse>` | Both commands and queries |
+| `ICommandInterceptor<TCommand, TResponse>` | `ICommand<TResponse>` | Commands only (write operations) |
+| `IQueryInterceptor<TQuery, TResponse>` | `IQuery<TResponse>` | Queries only (read operations) |
 
 ### Mapping Endpoints (Program.cs)
 

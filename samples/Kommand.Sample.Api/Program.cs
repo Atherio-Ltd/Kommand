@@ -18,7 +18,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddKommand(config =>
 {
     config.RegisterHandlersFromAssembly(typeof(Program).Assembly);
+
+    // Interceptors execute in registration order (first = outermost)
+    // 1. LoggingInterceptor: Applies to ALL requests (commands + queries)
     config.AddInterceptor(typeof(LoggingInterceptor<,>));
+
+    // 2. CommandAuditInterceptor: ONLY applies to commands (ICommand)
+    //    Creates audit trail for write operations
+    config.AddInterceptor(typeof(CommandAuditInterceptor<,>));
+
+    // 3. QueryCachingInterceptor: ONLY applies to queries (IQuery)
+    //    Caches read operation results
+    config.AddInterceptor(typeof(QueryCachingInterceptor<,>));
+
+    // 4. ValidationInterceptor: Validates requests before handler execution
     config.WithValidation();
 });
 

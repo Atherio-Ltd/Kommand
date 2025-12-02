@@ -48,7 +48,7 @@ We needed a CQRS mediator library that offered:
 - ✅ **CQRS**: Explicit command and query separation with `ICommand<TResponse>` and `IQuery<TResponse>`
 - ✅ **Zero Dependencies**: Only `Microsoft.Extensions.DependencyInjection.Abstractions` and `System.Diagnostics.DiagnosticSource`
 - ✅ **Auto-Discovery**: Handlers and validators automatically registered from assemblies
-- ✅ **Interceptors**: Cross-cutting concerns (validation, logging, metrics) with reverse-order execution
+- ✅ **Type-Specific Interceptors**: Command-only, Query-only, or both - precise cross-cutting concerns
 - ✅ **OpenTelemetry**: Zero-config distributed tracing and metrics with ~10-50ns overhead when not configured
 - ✅ **Pub/Sub**: Domain events with `INotification` and multiple handlers
 - ✅ **Custom Validation**: Built-in async validation system with auto-discovery (no FluentValidation required)
@@ -179,21 +179,25 @@ builder.Services.AddKommand(config =>
 });
 ```
 
-### Custom Interceptors
+### Type-Specific Interceptors
 
-Create interceptors for cross-cutting concerns:
+Kommand offers **three types of interceptors** - a unique feature that enables precise cross-cutting concerns:
+
+| Interface | Constraint | Use Case |
+|-----------|-----------|----------|
+| `IInterceptor<TRequest, TResponse>` | `IRequest<TResponse>` | Both commands and queries |
+| `ICommandInterceptor<TCommand, TResponse>` | `ICommand<TResponse>` | Commands only (write operations) |
+| `IQueryInterceptor<TQuery, TResponse>` | `IQuery<TResponse>` | Queries only (read operations) |
+
+This allows you to apply interceptors selectively based on the operation type:
+
+**General interceptor (all requests):**
 
 ```csharp
 public class LoggingInterceptor<TRequest, TResponse> : IInterceptor<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
 {
-    private readonly ILogger<LoggingInterceptor<TRequest, TResponse>> _logger;
-
-    public LoggingInterceptor(ILogger<LoggingInterceptor<TRequest, TResponse>> logger)
-    {
-        _logger = logger;
-    }
-
-    public async Task<TResponse> InterceptAsync(
+    public async Task<TResponse> HandleAsync(
         TRequest request,
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
@@ -206,11 +210,76 @@ public class LoggingInterceptor<TRequest, TResponse> : IInterceptor<TRequest, TR
 }
 ```
 
-Register interceptors:
+**Command-only interceptor (audit trails, transactions):**
 
 ```csharp
-config.AddInterceptor(typeof(LoggingInterceptor<,>));
+public class CommandAuditInterceptor<TCommand, TResponse> : ICommandInterceptor<TCommand, TResponse>
+    where TCommand : ICommand<TResponse>
+{
+    public async Task<TResponse> HandleAsync(
+        TCommand command,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        var commandName = typeof(TCommand).Name;
+        _logger.LogInformation("[AUDIT] Command: {CommandName}", commandName);
+
+        var response = await next();
+
+        _logger.LogInformation("[AUDIT] Command {CommandName} succeeded", commandName);
+        return response;
+    }
+}
 ```
+
+**Query-only interceptor (caching, read replicas):**
+
+```csharp
+public class QueryCachingInterceptor<TQuery, TResponse> : IQueryInterceptor<TQuery, TResponse>
+    where TQuery : IQuery<TResponse>
+{
+    public async Task<TResponse> HandleAsync(
+        TQuery query,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        var cacheKey = GenerateCacheKey(query);
+
+        if (TryGetFromCache(cacheKey, out var cached))
+            return cached!;
+
+        var response = await next();
+        AddToCache(cacheKey, response);
+        return response;
+    }
+}
+```
+
+**Register all interceptors in one place:**
+
+```csharp
+builder.Services.AddKommand(config =>
+{
+    config.RegisterHandlersFromAssembly(typeof(Program).Assembly);
+
+    // Applies to ALL requests (commands + queries)
+    config.AddInterceptor(typeof(LoggingInterceptor<,>));
+
+    // ONLY applies to commands
+    config.AddInterceptor(typeof(CommandAuditInterceptor<,>));
+
+    // ONLY applies to queries
+    config.AddInterceptor(typeof(QueryCachingInterceptor<,>));
+
+    config.WithValidation();
+});
+```
+
+This separation is powerful because:
+- **Audit interceptors** only run for commands (no noise from read operations)
+- **Caching interceptors** only run for queries (commands should never be cached)
+- **Transaction interceptors** can wrap only write operations
+- **Read replica routing** can be applied only to queries
 
 ### OpenTelemetry Integration
 
@@ -307,7 +376,8 @@ See [benchmarks](tests/Kommand.Benchmarks/) for detailed performance analysis.
 
 - **[Getting Started Guide](docs/getting-started.md)** - Step-by-step tutorial
 - **[Architecture Document](docs/ARCHITECTURE.md)** - Complete design specification
-- **[Sample Project](samples/Kommand.Sample/)** - Working example demonstrating all features
+- **[Console Sample](samples/Kommand.Sample/)** - Basic example demonstrating core features
+- **[API Sample](samples/Kommand.Sample.Api/)** - Minimal API demonstrating all features including type-specific interceptors
 - **[CHANGELOG](CHANGELOG.md)** - Version history and release notes
 
 ## Requirements

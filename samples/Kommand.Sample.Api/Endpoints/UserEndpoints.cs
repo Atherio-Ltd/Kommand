@@ -1,8 +1,8 @@
 using Kommand.Abstractions;
-using Kommand.Sample.Api.Commands;
+using Kommand.Sample.Api.Commands.UserCommands;
 using Kommand.Sample.Api.DTOs;
 using Kommand.Sample.Api.Models;
-using Kommand.Sample.Api.Queries;
+using Kommand.Sample.Api.Queries.UserQueries;
 
 namespace Kommand.Sample.Api.Endpoints;
 
